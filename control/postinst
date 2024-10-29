@@ -1,0 +1,9 @@
+#!/bin/sh
+echo ""
+echo "********************************************"
+echo "*           SimpleZOOMPanel                *"
+echo "*  select skin to enjoy new Wolrd			 *"
+echo "********************************************"
+echo ""
+sleep 2
+exit 0
