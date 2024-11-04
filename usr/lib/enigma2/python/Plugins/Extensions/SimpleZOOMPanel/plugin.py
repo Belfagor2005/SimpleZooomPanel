@@ -43,8 +43,10 @@ class MainMenus(Screen):
   <widget name="desc4" position="458,195" size="130,30" font="Regular;20" halign="center" />
   <!-- Detail -->
   <widget name="detail" position="10,228" size="580,53" font="Regular;26" halign="left" valign="center" />
-  <eLabel name="" position="7,3" size="269,44" text="Simple ZOOM Panel" font="Regular; 26" foregroundColor="#707070" />
-  <eLabel name="" position="445,1" size="66,26" text="created :" font="Regular; 15" foregroundColor="green" /><eLabel name="" position="517,2" size="81,23" text="E2W!zard" font="Regular; 16" /><eLabel name="" position="518,24" size="73,25" font="Regular; 16" text="HIUMAN" />
+  <eLabel name="" position="7,3" size="269,44" text="Simple ZOOM Panel 2.2.3" font="Regular; 26" foregroundColor="#707070" />
+  <eLabel name="" position="445,1" size="66,26" text="created :" font="Regular; 15" foregroundColor="green" />
+  <eLabel name="" position="517,2" size="81,23" text="E2W!zard" font="Regular; 16" />
+  <eLabel name="" position="518,24" size="73,25" font="Regular; 16" text="HIUMAN" />
 </screen>"""
 
     # Constructor to initialize the MainMenus screen
@@ -195,7 +197,7 @@ class MainMenus(Screen):
     # Run the FCA script with console output
     def runScriptWithConsole(self):
         script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
-        url = "https://raw.githubusercontent.com/E2Wizard/FCA/main/FCA.sh"
+        # url = "https://raw.githubusercontent.com/E2Wizard/FCA/main/FCA.sh"
 
         try:
             # Attempt to download the script
