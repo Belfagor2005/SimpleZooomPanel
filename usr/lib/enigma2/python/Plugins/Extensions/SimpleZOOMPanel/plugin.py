@@ -96,7 +96,8 @@ class MainMenus(Screen):
     def okClicked(self):
         # Determine action based on the selected icon
         if self.selectedIcon == 1:
-            self.session.open(SubMenu, "Tools", [("Free Cline Access", self.askForUserPreference)])
+            self.session.open(SubMenu, "Tools", [
+                ("Free Cline Access", self.askForUserPreference)])
         elif self.selectedIcon == 2:
             self.session.open(SubMenu, "Extras", [
                 ("Addons", [
@@ -105,10 +106,11 @@ class MainMenus(Screen):
                         ("Levi45 Addon", self.runLevi45Addon),
                         ("LinuxsatPanel addons", self.runLinuxsatPanel)
                     ]),
-                    ("Media", [
-                        ("ArchivCZSK", self.runArchivCZSK),
-                        ("CSFD", self.runCSFD)
-                    ]),
+                ]),
+                ("Media", [
+                    ("ArchivCZSK", self.runArchivCZSK),
+                    ("CSFD", self.runCSFD)
+                ]),
                 ("Dependencies", [
                     ("CURL", self.installCURL),
                     ("WGET", self.installWGET),
@@ -120,7 +122,7 @@ class MainMenus(Screen):
                     ("\"HomeMade\" config", self.installHomeMadeConfig)
                 ])
             ])
-        ])
+
         elif self.selectedIcon == 3:
             self.session.open(SubMenu, "Settings", [
                 ("Panel", [
@@ -197,24 +199,32 @@ class MainMenus(Screen):
     # Run the FCA script with console output
     def runScriptWithConsole(self):
         script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
-        # url = "https://raw.githubusercontent.com/E2Wizard/FCA/main/FCA.sh"
-
-        try:
-            # Attempt to download the script
-            response = requests.get(url)
-            response.raise_for_status()  # Will raise an HTTPError for bad responses (4xx and 5xx)
-
-            # Write the downloaded script to the file
-            with open(script_path, 'w') as file:
-                file.write(response.text)
+        if os.path.exists(script_path):
             chmod(script_path, 0o777)
+            # Execute the script
+            self.session.open(Console, title="Executing Free Cline Access Script", cmdlist=[script_path])
+        else:
+            self.session.open(MessageBox, "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh", MessageBox.TYPE_ERROR, timeout=10)
 
-        except Exception as e:
-            # If download or file writing fails, use the existing script
-            print("Failed to update script: {e}. Using existing script.", e)
+        '''
+        # url = "https://raw.githubusercontent.com/E2Wizard/FCA/main/FCA.sh"
+        # try:
+            # # Attempt to download the script
+            # response = requests.get(url)
+            # response.raise_for_status()  # Will raise an HTTPError for bad responses (4xx and 5xx)
+
+            # # Write the downloaded script to the file
+            # with open(script_path, 'w') as file:
+                # file.write(response.text)
+            # chmod(script_path, 0o777)
+
+        # except Exception as e:
+            # # If download or file writing fails, use the existing script
+            # print("Failed to update script: {e}. Using existing script.", e)
 
         # Execute the script
-        self.session.open(Console, title="Executing Free Cline Access Script", cmdlist=[script_path])
+        # self.session.open(Console, title="Executing Free Cline Access Script", cmdlist=[script_path])
+        '''
 
     # Script has been finished
     def scriptFinished(self, result):
@@ -252,22 +262,13 @@ class MainMenus(Screen):
             # Ensure the script_running flag is cleared after execution
             self.script_running.clear()
 
-    # def showOutputPages(self, pages, current_page):
-        # if current_page < len(pages):
-            # # Open a MessageBox with the current page of output
-            # self.session.openWithCallback(lambda ret: self.showOutputPages(pages, current_page + 1 if ret else max(current_page - 1, 0)),
-                                          # MessageBox, f"Script output (Page {current_page + 1}/{len(pages)}):\n{pages[current_page]}", MessageBox.TYPE_INFO)
-
     # Shows the paginated output of the script execution
     def showOutputPages(self, pages, current_page):
         if current_page < len(pages):
             message = "Script output (Page {} / {}):\n{}".format(current_page + 1, len(pages), pages[current_page])
             # Open a MessageBox with the current page of output
             try:
-                # self.session.openWithCallback(lambda ret: self.showOutputPages(pages1, str(current_page + 1) if ret else max(current_page - 1, 0)),
-                                              # MessageBox("Script output (Page " + str(current_page + 1) + "/" + str(len(pages)) + "):\n" + pages[current_page],
-                                              # MessageBox.TYPE_INFO))
-                self.session.openWithCallback(lambda ret: self.showOutputPages(pages1, str(current_page + 1) if ret else max(current_page - 1, 0)),
+                self.session.openWithCallback(lambda ret: self.showOutputPages(pages, str(current_page + 1) if ret else max(current_page - 1, 0)),
                                               MessageBox(message,
                                               MessageBox.TYPE_INFO))
             except Exception as e:
