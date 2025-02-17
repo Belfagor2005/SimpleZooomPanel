@@ -61,6 +61,7 @@ if [ $PYTHON = "PY3" ]; then
 		echo ""
 	else
 		opkg update && opkg --force-reinstall --force-overwrite install python3-six
+        
 	fi
 fi
 echo ""
@@ -97,7 +98,6 @@ sleep 2
 wget --no-check-certificate 'https://github.com/Belfagor2005/SimpleZooomPanel/archive/refs/heads/main.tar.gz'
 tar -xzf main.tar.gz
 cp -r 'SimpleZooomPanel-main/usr' '/'
-## cp -r 'SimpleZooomPanel-main/etc' '/'
 set +e
 cd
 sleep 2
