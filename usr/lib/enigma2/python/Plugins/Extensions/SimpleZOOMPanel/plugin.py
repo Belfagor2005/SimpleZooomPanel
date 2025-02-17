@@ -1,22 +1,24 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import os
-import threading
-import subprocess
-import zipfile
-import requests
-from Screens.Screen import Screen
-from Screens.Console import Console
-from Components.MenuList import MenuList
+
 from Components.ActionMap import ActionMap
-from Plugins.Plugin import PluginDescriptor
-from Screens.MessageBox import MessageBox
 from Components.Label import Label
+from Components.MenuList import MenuList
 from Components.Pixmap import Pixmap
+from Plugins.Plugin import PluginDescriptor
+from Screens.Console import Console
+from Screens.MessageBox import MessageBox
+from Screens.Screen import Screen
+from os import mkdir, chmod
+from os.path import exists
 from six.moves import range
-from os import chmod
-from six import text_type
+
+import os
+import subprocess
 import sys
+import threading
+import zipfile
+
 PY3 = sys.version_info.major >= 3
 
 if PY3:
@@ -30,54 +32,78 @@ else:
 class MainMenus(Screen):
     # Defining the skin (UI layout) of the MainMenus
     skin = """
-        <screen name="MainMenus" position="648,363" size="600,284" title="Centrum">
-  <!-- Icons -->
-  <widget name="icon1" position="12,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon1.png" transparent="1" alphatest="on" />
-  <widget name="icon2" position="162,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon2.png" transparent="1" alphatest="on" />
-  <widget name="icon3" position="312,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon3.png" transparent="1" alphatest="on" />
-  <widget name="icon4" position="459,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon4.png" transparent="1" alphatest="on" />
-  <!-- Descriptions -->
-  <widget name="desc1" position="12,195" size="130,30" font="Regular;20" halign="center" />
-  <widget name="desc2" position="163,195" size="130,30" font="Regular;20" halign="center" />
-  <widget name="desc3" position="313,195" size="130,30" font="Regular;20" halign="center" />
-  <widget name="desc4" position="458,195" size="130,30" font="Regular;20" halign="center" />
-  <!-- Detail -->
-  <widget name="detail" position="10,228" size="580,53" font="Regular;26" halign="left" valign="center" />
-  <eLabel name="" position="7,3" size="269,44" text="Simple ZOOM Panel 2.2.3" font="Regular; 26" foregroundColor="#707070" />
-  <eLabel name="" position="445,1" size="66,26" text="created :" font="Regular; 15" foregroundColor="green" />
-  <eLabel name="" position="517,2" size="81,23" text="E2W!zard" font="Regular; 16" />
-  <eLabel name="" position="518,24" size="73,25" font="Regular; 16" text="HIUMAN" />
-</screen>"""
+            <screen name="MainMenus" position="648,363" size="750,350" title="Centrum">
+                <!-- Cron -->
+                <widget name="lab2" position="1,290" size="380,40" font="Regular; 30" halign="right" valign="center" backgroundColor="background" transparent="1" />
+                <widget name="labstop" position="435,290" size="250,40" font="Regular;32" halign="center" valign="center" foregroundColor="white" backgroundColor="red" zPosition="1" />
+                <widget name="labrun" position="435,290" size="250,40" font="Regular;32" halign="center" valign="center" foregroundColor="white" backgroundColor="green" zPosition="1" />
+                <!-- Icon -->
+                <widget name="icon1" position="12,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon1.png" transparent="1" alphatest="on" />
+                <widget name="icon2" position="162,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon2.png" transparent="1" alphatest="on" />
+                <widget name="icon3" position="312,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon3.png" transparent="1" alphatest="on" />
+                <widget name="icon4" position="459,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon4.png" transparent="1" alphatest="on" />
+                <widget name="icon5" position="604,62" size="130,130" pixmap="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Graphics/icon5.png" transparent="1" alphatest="on" />
+                <!-- Descriptions -->
+                <widget name="desc1" position="12,195" size="130,30" font="Regular;20" halign="center" />
+                <widget name="desc2" position="163,195" size="130,30" font="Regular;20" halign="center" />
+                <widget name="desc3" position="313,195" size="130,30" font="Regular;20" halign="center" />
+                <widget name="desc4" position="458,195" size="130,30" font="Regular;20" halign="center" />
+                <widget name="desc5" position="608,195" size="130,30" font="Regular;20" halign="center" />
+                <!-- Detail -->
+                <widget name="detail" position="10,228" size="732,53" font="Regular; 28" halign="left" valign="center" />
+                <eLabel name="" position="7,3" size="350,44" text="Simple ZOOM Panel 2.2.5" font="Regular; 26" foregroundColor="#707070" />
+                <eLabel name="" position="445,1" size="66,26" text="created :" font="Regular; 15" foregroundColor="green" />
+                <eLabel name="" position="517,2" size="81,23" text="E2W!zard" font="Regular; 16" />
+                <eLabel name="" position="518,24" size="73,25" font="Regular; 16" text="HIUMAN" />
+            </screen>"""
 
     # Constructor to initialize the MainMenus screen
     def __init__(self, session):
         self.session = session
         Screen.__init__(self, session)  # Initialize the base class
+        if not exists("/usr/script"):
+            mkdir("/usr/script", 0o755)
         self.initUI()  # Set up the user interface
         self.initActions()  # Set up the actions (key mappings)
         self.selectedIcon = 1  # Start with the first icon selected
         self.script_running = threading.Event()  # Event to manage script running state
         self.updateSelection()  # Update the selection display
 
+        self.my_crond_run = False
+
+        self.on_init_cron()
+
     # Initialize the user interface elements
     def initUI(self):
+        # Set up cront
+        self["lab2"] = Label(_("Current Status:"))
+        self["labstop"] = Label(_("Stopped"))
+        self["labrun"] = Label(_("Running"))
+        self["labrun"].hide()
+
         # Set up icons
         self["icon1"] = Pixmap()
         self["icon2"] = Pixmap()
         self["icon3"] = Pixmap()
         self["icon4"] = Pixmap()
+        self["icon5"] = Pixmap()
+
         # Set up descriptions
         self["desc1"] = Label("Tools")
         self["desc2"] = Label("Extras")
         self["desc3"] = Label("Settings")
-        self["desc4"] = Label("Help")
+        self["desc4"] = Label("CronTimer")
+        self["desc5"] = Label("Help")
+
         # Set up detail label
         self["detail"] = Label("Select an option to view details")
+
         # Additional detail labels for each icon
         self["detail1"] = Label("A suite of utility tools.")
         self["detail2"] = Label("Additional features and enhancements.")
         self["detail3"] = Label("Customize plugin to your preference.")
-        self["detail4"] = Label("Get assistance, support and help.")
+        self["detail4"] = Label("Install CronTimer. Use Plugin Image")
+        self["detail5"] = Label("Get assistance, support and help.")
 
     # Initialize the actions (key mappings)
     def initActions(self):
@@ -91,6 +117,43 @@ class MainMenus(Screen):
             "yellow": self.yellowPressed,
             "blue": self.bluePressed
         }, -1)
+
+    def is_crond_running(self):
+        output = os.popen("pgrep crond").read().strip()
+        return bool(output)  # Restituisce True se crond è in esecuzione, False altrimenti
+
+    def on_init_cron(self):
+        crond_process = self.is_crond_running()
+        print("DEBUG: crond_process =", crond_process)  # Stampa lo stato attuale di crond
+        self["labrun"].hide()
+        self["labstop"].hide()
+        self.my_crond_run = crond_process  # Usa direttamente il valore booleano
+        if self.my_crond_run:
+            self["labstop"].hide()
+            self["labrun"].show()
+            print("DEBUG: process cron running")
+        else:
+            self["labstop"].show()
+            self["labrun"].hide()
+            print("DEBUG: process cron stopped")
+
+    def crondStart(self):
+        from Components.Console import Console
+        self.Console = Console()
+        if not self.my_crond_run:
+            print("DEBUG: Starting crond...")
+            self.Console.ePopen("/usr/sbin/crond -c /var/spool/cron/crontabs", self.startStopCallback)
+            self.session.open(MessageBox, "Please wait, starting crontimer!", MessageBox.TYPE_INFO, timeout=5)
+        else:
+            print("DEBUG: Stopping crond...")
+            self.Console.ePopen("killall crond", self.startStopCallback)
+            self.session.open(MessageBox, "Please wait, stopping crontimer!", MessageBox.TYPE_INFO, timeout=5)
+
+    def startStopCallback(self, result=None, retval=None, extra_args=None):
+        from time import sleep
+        print("DEBUG: Callback triggered -> result={}, retval={}, extra_args={}".format(result, retval, extra_args))
+        sleep(3)
+        self.on_init_cron()
 
     # Handle OK button click
     def okClicked(self):
@@ -129,18 +192,38 @@ class MainMenus(Screen):
                     ("Update Panel", self.update)
                 ])
             ])
+
         elif self.selectedIcon == 4:
+            self.session.open(SubMenu, "Cronotabs", [
+                ("CronTimer Install", self.installcron),
+                ("CronTimer Start", self.crondStart),
+                ("CronTimer Stop", self.crondStart),
+            ])
+
+        elif self.selectedIcon == 5:
             self.session.open(SubMenu, "Help", [
                 ("FAQ", self.faq),
                 ("Contact + Support", self.contactSupport),
                 ("INFO", self.info)
             ])
 
+    # Prompts the user to confirm the installation of crontimer
+    def installcron(self):
+        self.askForConfirmation("Do you want to install Cron Script?", self.confirmInstallCron)
+
+    # Handles the confirmation for installing Cron script
+    def confirmInstallCron(self, confirmed):
+        if confirmed:
+            source = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/root"
+            destination = "/etc/cron/crontabs/root"
+            command = "mkdir -p /etc/cron/crontabs;cp %s %s && chmod +x %s" % (source, destination, destination)
+            self.session.open(Console, _("Installing cron job script..."), [command])
+
     # Update the selection display based on the currently selected icon
     def updateSelection(self):
-        descriptions = ["Tools", "Extras", "Settings", "Help"]
+        descriptions = ["Tools", "Extras", "Settings", "CronTimer", "Help"]
         self["detail"].hide()  # Hide detail by default
-        for i in range(1, 5):
+        for i in range(1, 6):
             self["icon" + str(i)].show()  # Show all icons
             if i == self.selectedIcon:
                 # Highlight the selected icon
@@ -181,7 +264,7 @@ class MainMenus(Screen):
 
     # Handle Blue button press
     def bluePressed(self):
-        self.selectedIcon = 4
+        self.selectedIcon = 5
         self.updateSelection()
         self.okClicked()
 
@@ -205,26 +288,6 @@ class MainMenus(Screen):
             self.session.open(Console, title="Executing Free Cline Access Script", cmdlist=[script_path])
         else:
             self.session.open(MessageBox, "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh", MessageBox.TYPE_ERROR, timeout=10)
-
-        '''
-        # url = "https://raw.githubusercontent.com/E2Wizard/FCA/main/FCA.sh"
-        # try:
-            # # Attempt to download the script
-            # response = requests.get(url)
-            # response.raise_for_status()  # Will raise an HTTPError for bad responses (4xx and 5xx)
-
-            # # Write the downloaded script to the file
-            # with open(script_path, 'w') as file:
-                # file.write(response.text)
-            # chmod(script_path, 0o777)
-
-        # except Exception as e:
-            # # If download or file writing fails, use the existing script
-            # print("Failed to update script: {e}. Using existing script.", e)
-
-        # Execute the script
-        # self.session.open(Console, title="Executing Free Cline Access Script", cmdlist=[script_path])
-        '''
 
     # Script has been finished
     def scriptFinished(self, result):
@@ -391,16 +454,16 @@ class MainMenus(Screen):
             "/bin/sh -c 'opkg install https://github.com/AMAJamry/AJPanel/raw/main/enigma2-plugin-extensions-ajpanel_v9.4.0_all.ipk'"
         ])
 
-    # Installs SatVenusPanel
+    # Installs Levi45Addon
     def runLevi45Addon(self):
-        self.session.open(Console, _("Installing SatVenusPanel..."), [
-            'wget -q "--no-check-certificate" https://raw.githubusercontent.com/levi-45/Addon/main/installer.sh -O - | /bin/sh'
+        self.session.open(Console, _("Installing Levi45Addon..."), [
+            'wget -q --no-check-certificate https://raw.githubusercontent.com/levi-45/Addon/main/installer.sh -O - | /bin/sh'
         ])
 
     # Installs TiVuStream addons
     def runLinuxsatPanel(self):
         self.session.open(Console, _("Installing TiVuStream addons..."), [
-            'wget -q "--no-check-certificate" https://raw.githubusercontent.com/Belfagor2005/LinuxsatPanel/main/installer.sh -O - | /bin/sh'
+            'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/LinuxsatPanel/main/installer.sh -O - | /bin/sh'
         ])
 
     # Installs ArchivCZSK
@@ -490,6 +553,7 @@ class MainMenus(Screen):
             "- Lvicek07\n"
             "- Kakamus\n"
             "- Axy\n\n"
+            "- Lululla\n\n"
             "Overview:\n"
             "The Simple ZOOM Panel plugin provides an intuitive and user-friendly (somewhat) interface for Enigma2-based systems. "
             "It offers a centralized hub for accessing tools, extras, settings, and help, enhancing the overall user experience."
