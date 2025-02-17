@@ -10,9 +10,9 @@ TMPPATH=/tmp/SimpleZooomPanel-main
 FILEPATH=/tmp/main.tar.gz
 
 if [ ! -d /usr/lib64 ]; then
-	PLUGINPATH=/usr/lib/enigma2/python/Plugins/Extensions/SimpleZooomPanel
+	PLUGINPATH=/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel
 else
-	PLUGINPATH=/usr/lib64/enigma2/python/Plugins/Extensions/SimpleZooomPanel
+	PLUGINPATH=/usr/lib64/enigma2/python/Plugins/Extensions/SimpleZOOMPanel
 fi
 
 ## Remove tmp directory
