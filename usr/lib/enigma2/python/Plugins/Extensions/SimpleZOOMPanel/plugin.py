@@ -241,7 +241,7 @@ class MainMenus(Screen):
 
     # Handle Right key press
     def keyRight(self):
-        self.selectedIcon = 1 if self.selectedIcon == 4 else self.selectedIcon + 1
+        self.selectedIcon = 1 if self.selectedIcon == 5 else self.selectedIcon + 1
         self.updateSelection()
 
     # Handle Red button press
@@ -326,16 +326,16 @@ class MainMenus(Screen):
             self.script_running.clear()
 
     # Shows the paginated output of the script execution
-    def showOutputPages(self, pages, current_page):
-        if current_page < len(pages):
-            message = "Script output (Page {} / {}):\n{}".format(current_page + 1, len(pages), pages[current_page])
-            # Open a MessageBox with the current page of output
-            try:
-                self.session.openWithCallback(lambda ret: self.showOutputPages(pages, str(current_page + 1) if ret else max(current_page - 1, 0)),
-                                              MessageBox(message,
-                                              MessageBox.TYPE_INFO))
-            except Exception as e:
-                print("Error opening MessageBox:", str(e))
+    # def showOutputPages(self, pages, current_page):
+        # if current_page < len(pages):
+            # message = "Script output (Page {} / {}):\n{}".format(current_page + 1, len(pages), pages[current_page])
+            # # Open a MessageBox with the current page of output
+            # try:
+                # self.session.openWithCallback(lambda ret: self.showOutputPages(pages, str(current_page + 1) if ret else max(current_page - 1, 0)),
+                                              # MessageBox(message,
+                                              # MessageBox.TYPE_INFO))
+            # except Exception as e:
+                # print("Error opening MessageBox:", str(e))
 
     # Dummy function to indicate unimplemented options
     def dummy(self):
@@ -536,6 +536,19 @@ class MainMenus(Screen):
 
         # Show the first page of the FAQ
         self.showOutputPages(output_pages, 0)
+
+    def showOutputPages(self, pages, current_page):
+        if current_page < len(pages):
+            message = "Script output (Page {} / {}):\n{}".format(current_page + 1, len(pages), pages[current_page])
+            try:
+                self.session.openWithCallback(
+                    lambda ret: self.showOutputPages(pages, current_page + 1 if ret else max(current_page - 1, 0)),
+                    MessageBox,
+                    message,
+                    MessageBox.TYPE_INFO
+                )
+            except Exception as e:
+                print("Error opening MessageBox:", str(e))
 
     # Provides contact information for support
     def contactSupport(self):
