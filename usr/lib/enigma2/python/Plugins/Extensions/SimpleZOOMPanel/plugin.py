@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
 from . import _
 
 from Components.ActionMap import ActionMap
@@ -10,10 +11,9 @@ from Plugins.Plugin import PluginDescriptor
 from Screens.Console import Console
 from Screens.MessageBox import MessageBox
 from Screens.Screen import Screen
-from os import mkdir, chmod, popen, rename
-from os.path import exists
+from os import mkdir, chmod, rename, popen
+from os.path import exists, dirname
 from six.moves import range
-
 import subprocess
 import sys
 import threading
@@ -26,9 +26,112 @@ if PY3:
 else:
 	from urllib2 import urlopen
 
+
+script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
+
+
+# recoded from lululla
+def findCccam():
+	search_dirs = ['/etc']  # ['/usr', '/var', '/etc', '/etc/tuxbox/']
+	paths = []
+	for directory in search_dirs:
+		cmd = 'find %s -name "CCcam.cfg"' % directory
+		try:
+			res = subprocess.check_output(cmd, shell=True, stderr=subprocess.PIPE).decode().strip()
+			if res:
+				paths.extend(res.splitlines())
+		except subprocess.CalledProcessError:
+			continue
+	if not paths:
+		paths.append("/etc/CCcam.cfg")
+	return paths
+
+
+def findOscam():
+	paths = [
+		'/etc/tuxbox/config/oscam/oscam.server',
+		'/etc/tuxbox/config/oscam-emu/oscam.server',
+		'/etc/tuxbox/config/oscam_atv_free/oscam.server',
+		'/etc/tuxbox/config/oscam.server',
+		'/etc/tuxbox/config/oscam-stable/oscam.server',
+		'/var/tuxbox/config/oscam.server',
+		'/etc/tuxbox/config/gcam.server',
+		'/etc/tuxbox/config/ncam.server',
+		'/etc/tuxbox/config/ncam/ncam.server',
+		'/etc/tuxbox/config/supcam-emu/oscam.server',
+		'/etc/tuxbox/config/oscamicam/oscam.server',
+		'/etc/tuxbox/config/oscamicamnew/oscam.server'
+	]
+	return paths
+
+
+def saveFileContent(file_pathx):
+	"""Returns the contents of the file if it exists."""
+	if exists(file_pathx):
+		with open(file_pathx, 'r') as f:
+			return f.read()
+	return ""
+
+
+def prependToFile(file_pathx):
+	"""
+	Reads (and creates if necessary) the original backup of the file,
+	adding markers to avoid duplication.
+	Returns the original content (with markers).
+	"""
+	directory = dirname(file_pathx)
+	if not exists(directory):
+		print("DEBUG: Directory non esistente per", file_pathx)
+		return ""
+
+	backup_path = file_pathx + "Orig"
+	original_content = ""
+
+	if not exists(backup_path) and exists(file_pathx):
+		with open(file_pathx, 'r') as f:
+			original_content = f.read()
+		with open(backup_path, 'w') as f:
+			f.write(original_content)
+		print("DEBUG: Creato backup per", file_pathx)
+	elif exists(backup_path):
+		with open(backup_path, 'r') as f:
+			original_content = f.read()
+		print("DEBUG: Lettura backup esistente per", file_pathx)
+
+	marker_start = "### ORIGINAL START ###"
+	marker_end = "### ORIGINAL END ###"
+	if marker_start not in original_content:
+		original_content = marker_start + "\n" + original_content.strip() + "\n" + marker_end + "\n"
+		print("DEBUG: Aggiunti marker al backup per", file_pathx)
+	else:
+		print("DEBUG: Marker già presenti nel backup per", file_pathx)
+
+	return original_content
+
+
+def remove_backup_block(content):
+	"""
+	If the content starts with the backup block (marker),
+	removes it and returns only the new content.
+	"""
+	marker_start = "### ORIGINAL START ###"
+	marker_end = "### ORIGINAL END ###"
+	if content.startswith(marker_start):
+		end_index = content.find(marker_end)
+		if end_index != -1:
+			# Salta il blocco del backup
+			return content[end_index + len(marker_end):].strip()
+	return content
+
+
+def ensure_directory_exists(file_path):
+	"""Ensures that the file directory exists; otherwise, creates it."""
+	directory = dirname(file_path)
+	if not exists(directory):
+		return
+
+
 # Main menu screen class that provides the primary user interface
-
-
 class MainMenus(Screen):
 	# Defining the skin (UI layout) of the MainMenus
 	skin = """
@@ -116,6 +219,65 @@ class MainMenus(Screen):
 			"blue": self.bluePressed
 		}, -1)
 
+	# Handle OK button click
+	def okClicked(self):
+		# Determine action based on the selected icon
+		if self.selectedIcon == 1:
+			self.session.open(SubMenu, "Tools", [
+				("Free Cline Access", self.askForUserPreference),
+				("Update FCA Script", self.askForUpdateFca)
+			])
+		elif self.selectedIcon == 2:
+			self.session.open(SubMenu, "Extras", [
+				("Addons", [
+					("Panels", [
+						("AJpanel", self.runAJPanel),
+						("Levi45 Addon", self.runLevi45Addon),
+						("LinuxsatPanel addons", self.runLinuxsatPanel)
+					]),
+				]),
+				("Media", [
+					("ArchivCZSK", self.runArchivCZSK),
+					("CSFD", self.runCSFD)
+				]),
+				("Dependencies", [
+					("CCCAM.CFG/OSCAM.CFG/CCCAMDATAX/OSCAMDATAX", self.installCCCAMDATAX),
+					("CURL", self.installCURL),
+					("WGET", self.installWGET),
+					("Python", self.installPython)
+
+				]),
+				("CAMs", [
+					("SoftCAM feed", self.installSoftCAMFeed),
+					("\"HomeMade\" config", self.installHomeMadeConfig)
+				])
+			])
+
+		elif self.selectedIcon == 3:
+			self.session.open(SubMenu, "Settings", [
+				("Panel", [
+					("Update Panel", self.update)
+				])
+			])
+
+		elif self.selectedIcon == 4:
+			self.session.open(SubMenu, "Cronotabs", [
+				("CronTimer Install", self.installcron),
+				("CronTimer Start", self.crondStart),
+				("CronTimer Stop", self.crondStart),
+			])
+
+		elif self.selectedIcon == 5:
+			self.session.open(SubMenu, "Help", [
+				("FAQ", self.faq),
+				("Contact + Support", self.contactSupport),
+				("INFO", self.info)
+			])
+
+	# recoded from lululla Prompts the user to confirm the installation of crontimer
+	def installcron(self):
+		self.askForConfirmation("Do you want to install Cron Script?", self.confirmInstallCron)
+
 	def is_crond_running(self):
 		output = popen("pgrep crond").read().strip()
 		return bool(output)
@@ -153,63 +315,6 @@ class MainMenus(Screen):
 		sleep(3)
 		self.on_init_cron()
 
-	# Handle OK button click
-	def okClicked(self):
-		# Determine action based on the selected icon
-		if self.selectedIcon == 1:
-			self.session.open(SubMenu, "Tools", [
-				("Free Cline Access", self.askForUserPreference)])
-		elif self.selectedIcon == 2:
-			self.session.open(SubMenu, "Extras", [
-				("Addons", [
-					("Panels", [
-						("AJpanel", self.runAJPanel),
-						("Levi45 Addon", self.runLevi45Addon),
-						("LinuxsatPanel addons", self.runLinuxsatPanel)
-					]),
-				]),
-				("Media", [
-					("ArchivCZSK", self.runArchivCZSK),
-					("CSFD", self.runCSFD)
-				]),
-				("Dependencies", [
-					("CURL", self.installCURL),
-					("WGET", self.installWGET),
-					("Python", self.installPython),
-					("CCCAM.CFG/OSCAM.CFG/CCCAMDATAX/OSCAMDATAX", self.installCCCAMDATAX)
-				]),
-				("CAMs", [
-					("SoftCAM feed", self.installSoftCAMFeed),
-					("\"HomeMade\" config", self.installHomeMadeConfig)
-				])
-			])
-
-		elif self.selectedIcon == 3:
-			self.session.open(SubMenu, "Settings", [
-				("Panel", [
-					("Update Panel", self.update)
-				])
-			])
-
-		elif self.selectedIcon == 4:
-			self.session.open(SubMenu, "Cronotabs", [
-				("CronTimer Install", self.installcron),
-				("CronTimer Start", self.crondStart),
-				("CronTimer Stop", self.crondStart),
-			])
-
-		elif self.selectedIcon == 5:
-			self.session.open(SubMenu, "Help", [
-				("FAQ", self.faq),
-				("Contact + Support", self.contactSupport),
-				("INFO", self.info)
-			])
-
-	# Prompts the user to confirm the installation of crontimer
-	def installcron(self):
-		self.askForConfirmation("Do you want to install Cron Script?", self.confirmInstallCron)
-
-	# Handles the confirmation for installing Cron script
 	def confirmInstallCron(self, confirmed):
 		if confirmed:
 			source = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/root"
@@ -232,14 +337,16 @@ class MainMenus(Screen):
 				# Set default description for non-selected icons
 				self["desc" + str(i)].setText(descriptions[i - 1])
 
-	# Handle Left key press
+	# Handle Left key press # fixed lululla
 	def keyLeft(self):
-		self.selectedIcon = 4 if self.selectedIcon == 1 else self.selectedIcon - 1
+		# self.selectedIcon = 5 if self.selectedIcon == 1 else self.selectedIcon - 1
+		self.selectedIcon = 5 if self.selectedIcon == 1 else self.selectedIcon - 1
 		self.updateSelection()
 
-	# Handle Right key press
+	# Handle Right key press # fixed lululla
 	def keyRight(self):
-		self.selectedIcon = 1 if self.selectedIcon == 5 else self.selectedIcon + 1
+		# self.selectedIcon = 1 if self.selectedIcon == 5 else self.selectedIcon + 1
+		self.selectedIcon = (self.selectedIcon % 5) + 1
 		self.updateSelection()
 
 	# Handle Red button press
@@ -266,31 +373,100 @@ class MainMenus(Screen):
 		self.updateSelection()
 		self.okClicked()
 
-	# Prompt user to confirm whether they want to see the process (or background) for Free Cline Access
+	# Prompt the user to confirm whether they want to update the script
+	def askForUpdateFca(self):
+		self.session.openWithCallback(self.UpdateFca, MessageBox, "Do you want to see the process?", MessageBox.TYPE_YESNO)
+
+	# Handles the confirmation for installing FCA Script from Lululla git # fixed lululla
+	def UpdateFca(self, confirmed):
+		if confirmed:
+			# script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
+			command = "wget -O %s 'https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/refs/heads/main/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh' && chmod +x %s" % (script_path, script_path)
+			self.session.open(Console, _("Update FCA Script From Git..."), [command])
+
+	# Prompt user to confirm whether they want to see the process (or background) for Free Cline Access # fixed lululla
 	def askForUserPreference(self):
 		self.session.openWithCallback(self.runScriptWithPreference, MessageBox, "Do you want to see the process?", MessageBox.TYPE_YESNO)
 
-	# Execute script based on user preference
+	# recoded from lululla # fixed lululla
 	def runScriptWithPreference(self, confirmed):
-		if confirmed:
-			self.runScriptWithConsole()  # Show the process in a console
-		else:
-			self.runScriptInBackground()  # Run the script in the background
+		# Find the configuration files
+		print("DEBUG: Find CCcam file...")
+		cccam_paths = findCccam()
+		print("DEBUG: cccam_paths =", cccam_paths)
+		print("DEBUG: Find Oscam file...")
+		oscam_paths = findOscam()
+		print("DEBUG: oscam_paths =", oscam_paths)
+		# Step 1: Save backup (original with marker) BEFORE running the script
+		self.cccam_original_content = {}
+		for cccam_path in set(cccam_paths):
+			cccam_path = cccam_path.strip()
+			if cccam_path:
+				backup = prependToFile(cccam_path)
+				self.cccam_original_content[cccam_path] = backup
+				print("DEBUG: Backup per", cccam_path)
 
-	# Run the FCA script with console output
-	def runScriptWithConsole(self):
-		script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
+		self.oscam_original_content = {}
+		for oscam_path in set(oscam_paths):
+			oscam_path = oscam_path.strip()
+			if oscam_path:
+				backup = prependToFile(oscam_path)
+				self.oscam_original_content[oscam_path] = backup
+				print("DEBUG: Backup per", oscam_path)
+
+		# Step 2: Execute script
+		if confirmed:
+			print("DEBUG: Execute script in console...")
+			self.runScriptWithConsole()
+		else:
+			print("DEBUG: Execute script in background...")
+			self.runScriptInBackground()
+
+	def runScriptWithConsole(self):  # fixed lululla
+		# script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
 		if exists(script_path):
 			chmod(script_path, 0o777)
-			# Execute the script
-			self.session.open(Console, title="Executing Free Cline Access Script", cmdlist=[script_path])
-		else:
-			self.session.open(MessageBox, "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh", MessageBox.TYPE_ERROR, timeout=10)
+			self.session.open(Console,
+							  title="Executing Free Cline Access Script",
+							  cmdlist=[script_path],
+							  finishedCallback=self.scriptFinished)
 
-	# Script has been finished
-	def scriptFinished(self, result):
-		self.script_running.clear()
-		self.session.open(MessageBox, "Script execution finished!", MessageBox.TYPE_INFO, timeout=5)
+		else:
+			self.session.open(MessageBox,
+							  "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh",
+							  MessageBox.TYPE_ERROR,
+							  timeout=10)
+
+	def scriptFinished(self, result=None):  # fixed lululla
+		print("DEBUG: Script finished, I proceed with updating the files.")
+		self.updateFilesWithBackup()
+
+	def updateFilesWithBackup(self):  # fixed lululla
+		for cccam_path, backup in self.cccam_original_content.items():
+			ensure_directory_exists(cccam_path)
+			new_content_raw = saveFileContent(cccam_path).strip()
+			print("DEBUG: New content RAW for", cccam_path)
+			# print(new_content_raw)
+			new_content = remove_backup_block(new_content_raw)
+			final_content = backup.strip() + "\n" + new_content
+			print("DEBUG: Final content for", cccam_path)
+			# print(final_content)
+			with open(cccam_path, 'w') as f:
+				f.write(final_content.strip() + "\n")
+
+		for oscam_path, backup in self.oscam_original_content.items():
+			ensure_directory_exists(oscam_path)
+			new_content_raw = saveFileContent(oscam_path).strip()
+			print("DEBUG: New content RAW for", oscam_path)
+			# print(new_content_raw)
+			new_content = remove_backup_block(new_content_raw)
+			final_content = backup.strip() + "\n" + new_content
+			print("DEBUG: Final content for", oscam_path)
+			# print(final_content)
+			if exists(oscam_path):
+				with open(oscam_path, 'w') as f:
+					f.write(final_content.strip() + "\n")
+			print("DEBUG: EXECUTION FINISHED")
 
 	# Run the script FCA in the background
 	def runScriptInBackground(self):
@@ -298,7 +474,7 @@ class MainMenus(Screen):
 			self.session.open(MessageBox, "Please wait, the process is still running!", MessageBox.TYPE_INFO, timeout=5)
 			return
 		self.script_running.set()
-		script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
+		# script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
 		chmod(script_path, 0o777)
 		threading.Thread(target=self.executeScript, args=(script_path,)).start()
 		self.session.open(MessageBox, "Process has started. Please wait for completion!", MessageBox.TYPE_INFO, timeout=10)
@@ -446,7 +622,7 @@ class MainMenus(Screen):
 			'wget -q --no-check-certificate https://raw.githubusercontent.com/levi-45/Addon/main/installer.sh -O - | /bin/sh'
 		])
 
-	# Installs LinuxsatPanel addons
+	# Installs LinuxsatPanel addons recoded from lululla
 	def runLinuxsatPanel(self):
 		self.session.open(Console, _("Installing LinuxsatPanel addons..."), [
 			'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/LinuxsatPanel/main/installer.sh -O - | /bin/sh'
@@ -467,10 +643,11 @@ class MainMenus(Screen):
 	# simply the update
 	def update(self):
 		self.session.open(Console, _("Updating package..."), [
-			"wget -O /tmp/package.ipk 'https://drive.google.com/uc?export=download&id=1c01xd-idAwPc6rDO8TqGijXG8niJ52Sv' > /dev/null 2>&1 && opkg install /tmp/package.ipk"
+			# "wget -O /tmp/package.ipk 'https://drive.google.com/uc?export=download&id=1c01xd-idAwPc6rDO8TqGijXG8niJ52Sv' > /dev/null 2>&1 && opkg install /tmp/package.ipk"
+			'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh'
 		])
 
-	# Displays FAQ information in paginated format
+	# Displays FAQ information in paginated format recoded from lululla
 	def faq(self):
 		faq_text = (
 			("General Questions\n") +
@@ -524,6 +701,7 @@ class MainMenus(Screen):
 		# Show the first page of the FAQ
 		self.showOutputPages(output_pages, 0)
 
+	# recoded from lululla
 	def showOutputPages(self, pages, current_page):
 		if current_page < len(pages):
 			message = "Script output (Page {} / {}):\n{}".format(current_page + 1, len(pages), pages[current_page])
