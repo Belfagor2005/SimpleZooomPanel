@@ -3,7 +3,7 @@
 ## setup command=wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh
 
 ## Only This 2 lines to edit with new version ######
-version='2.2.5'
+version='2.2.6'
 changelog='\nFix Server'
 ##
 TMPPATH=/tmp/SimpleZooomPanel-main
