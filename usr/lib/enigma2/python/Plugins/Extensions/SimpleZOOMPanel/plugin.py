@@ -81,7 +81,7 @@ def prependToFile(file_pathx):
 	"""
 	directory = dirname(file_pathx)
 	if not exists(directory):
-		print("DEBUG: Directory non esistente per", file_pathx)
+		print("DEBUG: Directory not exixts", file_pathx)
 		return ""
 
 	backup_path = file_pathx + "Orig"
@@ -92,19 +92,19 @@ def prependToFile(file_pathx):
 			original_content = f.read()
 		with open(backup_path, 'w') as f:
 			f.write(original_content)
-		print("DEBUG: Creato backup per", file_pathx)
+		print("DEBUG: Mke backup for", file_pathx)
 	elif exists(backup_path):
 		with open(backup_path, 'r') as f:
 			original_content = f.read()
-		print("DEBUG: Lettura backup esistente per", file_pathx)
+		print("DEBUG: Reads backup", file_pathx)
 
 	marker_start = "### ORIGINAL START ###"
 	marker_end = "### ORIGINAL END ###"
 	if marker_start not in original_content:
 		original_content = marker_start + "\n" + original_content.strip() + "\n" + marker_end + "\n"
-		print("DEBUG: Aggiunti marker al backup per", file_pathx)
+		print("DEBUG: Add marker to backup", file_pathx)
 	else:
-		print("DEBUG: Marker già presenti nel backup per", file_pathx)
+		print("DEBUG: Marker is present nel backup", file_pathx)
 
 	return original_content
 
@@ -119,7 +119,6 @@ def remove_backup_block(content):
 	if content.startswith(marker_start):
 		end_index = content.find(marker_end)
 		if end_index != -1:
-			# Salta il blocco del backup
 			return content[end_index + len(marker_end):].strip()
 	return content
 
