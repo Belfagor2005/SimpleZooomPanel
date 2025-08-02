@@ -212,7 +212,7 @@ for path in \
     /etc/tuxbox/config/oscam-emu/oscam.server \
     /etc/tuxbox/config/oscam_atv_free/oscam.server \
     /etc/tuxbox/config/oscam.server \
-    /etc/tuxbox/config/oscam-stable/oscam.server
+    /etc/tuxbox/config/oscam-stable/oscam.server \
     /var/tuxbox/config/oscam.server \
     /etc/tuxbox/config/gcam.server \
     /etc/tuxbox/config/ncam.server \
@@ -229,7 +229,7 @@ rm -rf /tmp/server /tmp/server_n
 cat /etc/CCcam.cfg > /etc/oscam.cfg
 
 echo ""
-/etc/init.d/softcam restart
+[ -x /etc/init.d/softcam ] && /etc/init.d/softcam restart || echo "Softcam init script not found or not executable"
 echo ""
 pocet1=$(wc -l < /etc/CCcam.cfg)
 echo "SERVERS..... $pocet1"
