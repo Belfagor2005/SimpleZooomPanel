@@ -1,6 +1,4 @@
-[![Python package](https://github.com/Belfagor2005/SimpleZooomPanel
-/actions/workflows/pylint.yml/badge.svg)](https://github.com/Belfagor2005/SimpleZooomPanel
-/actions/workflows/pylint.yml)
+[![Python package](https://github.com/Belfagor2005/SimpleZooomPanel/actions/workflows/pylint.yml/badge.svg)](https://github.com/Belfagor2005/SimpleZooomPanel/actions/workflows/pylint.yml)
 
 Symple Zoom Panel on enigma2
 
@@ -21,3 +19,4 @@ here offical Topic and Version
 
 
 https://www.linuxsat-support.com/thread/157589-simple-zoom-panel/?pageNo=1
+
