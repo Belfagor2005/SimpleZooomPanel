@@ -29,153 +29,250 @@ else:
 
 script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
 
-# File per salvare le linee personali
+# Files for personal lines
 PERSONAL_LINES_DIR = "/etc/personal_lines/"
 CCCAM_PERSONAL = PERSONAL_LINES_DIR + "cccamx"
 OSCAM_PERSONAL = PERSONAL_LINES_DIR + "oscamx"
 NCAM_PERSONAL = PERSONAL_LINES_DIR + "ncamx"
 
 
+# recoded from lululla
 def ensure_personal_lines_dir():
-    """Create the directory for personal lines if it doesn’t exist"""
+    """Create directory for personal lines if not exists"""
     if not exists(PERSONAL_LINES_DIR):
         mkdir(PERSONAL_LINES_DIR, 0o755)
+        print("DEBUG: Created personal lines directory:", PERSONAL_LINES_DIR)
 
 
-def save_personal_cccam_line():
-    """Save the personal CCCam line from the CCcam.cfg file"""
+def save_personal_lines_from_files():
+    """Copy personal line files to personal_lines directory"""
     ensure_personal_lines_dir()
-    cccam_paths = findCccam()
 
-    for cccam_path in cccam_paths:
-        cccam_path = cccam_path.strip()
-        if exists(cccam_path):
-            with open(cccam_path, 'r') as f:
-                content = f.read()
+    files_copied = []
 
-            # Extract C: lines (excluding free or test servers)
-            lines = content.split('\n')
-            personal_lines = []
-
-            for line in lines:
-                line = line.strip()
-                if line.startswith('C: ') and 'free' not in line.lower() and 'test' not in line.lower():
-                    # Check if it’s a personal line (based on common patterns)
-                    if len(line) > 20:  # Real lines are usually longer
-                        personal_lines.append(line)
-
-            if personal_lines:
-                with open(CCCAM_PERSONAL, 'w') as f:
-                    f.write('\n'.join(personal_lines))
-                print("DEBUG: Personal CCCam line saved")
-                return True
-
-    return False
-
-
-def save_personal_oscam_line():
-    """Save personal OSCam configuration"""
-    ensure_personal_lines_dir()
-    oscam_paths = findOscam()
-
-    for oscam_path in oscam_paths:
-        oscam_path = oscam_path.strip()
-        if exists(oscam_path):
-            with open(oscam_path, 'r') as f:
-                content = f.read()
-
-            # Look for [reader] sections that appear to be personal
-            if '[reader]' in content:
-                with open(OSCAM_PERSONAL, 'w') as f:
-                    f.write(content)
-                print("DEBUG: Personal OSCam configuration saved")
-                return True
-
-    return False
-
-
-def save_personal_ncam_line():
-    """Save personal NCam configuration"""
-    ensure_personal_lines_dir()
-    ncam_paths = [
-        '/etc/tuxbox/config/ncam.server',
-        '/etc/tuxbox/config/ncam/ncam.server'
+    # Search and copy personal line files
+    personal_files = [
+        ('/etc/cccamx.txt', CCCAM_PERSONAL),
+        ('/etc/oscamx.txt', OSCAM_PERSONAL),
+        ('/etc/ncamx.txt', NCAM_PERSONAL),
+        ('/usr/script/cccamx.txt', CCCAM_PERSONAL),
+        ('/usr/script/oscamx.txt', OSCAM_PERSONAL),
+        ('/usr/script/ncamx.txt', NCAM_PERSONAL),
+        ('/tmp/cccamx.txt', CCCAM_PERSONAL),
+        ('/tmp/oscamx.txt', OSCAM_PERSONAL),
+        ('/tmp/ncamx.txt', NCAM_PERSONAL)
     ]
 
-    for ncam_path in ncam_paths:
-        if exists(ncam_path):
-            with open(ncam_path, 'r') as f:
-                content = f.read()
+    for source, destination in personal_files:
+        if exists(source):
+            try:
+                with open(source, 'r') as f:
+                    content = f.read().strip()
 
-            # Save the entire content as a personal configuration
-            with open(NCAM_PERSONAL, 'w') as f:
-                f.write(content)
-            print("DEBUG: Personal NCam configuration saved")
-            return True
+                if content:
+                    with open(destination, 'w') as f:
+                        f.write(content)
+                    files_copied.append(source)
+                    print("DEBUG: Copied %s to %s" % (source, destination))
+            except Exception as e:
+                print("DEBUG: Error copying %s: %s" % (source, str(e)))
 
-    return False
+    return files_copied
 
 
 def add_personal_lines_to_configs():
-    """Adds personal lines to configuration files after an update"""
+    """Add personal lines to configuration files - FCA.sh will handle conversion"""
     ensure_personal_lines_dir()
-
-    # Add personal CCCam line
+    print("DEBUG: Adding personal lines to configs - FCA.sh will handle OSCam/NCam conversion")
+    
+    # Add personal CCCam lines to CCcam.cfg ONLY
+    # FCA.sh will automatically convert everything to OSCam/NCam
     if exists(CCCAM_PERSONAL):
         with open(CCCAM_PERSONAL, 'r') as f:
-            cccam_personal_content = f.read().strip()
+            cccam_content = f.read().strip()
 
-        if cccam_personal_content:
+        if cccam_content:
             cccam_paths = findCccam()
             for cccam_path in cccam_paths:
                 cccam_path = cccam_path.strip()
                 if exists(cccam_path):
-                    with open(cccam_path, 'a') as f:
-                        f.write('\n# Personal CCCam Line\n')
-                        f.write(cccam_personal_content + '\n')
-                    print("DEBUG: Personal CCCam line added to", cccam_path)
+                    # Read current content
+                    with open(cccam_path, 'r') as f:
+                        current_content = f.read()
 
-    # Add personal OSCam configuration
+                    # Remove previous personal sections
+                    lines = current_content.split('\n')
+                    filtered_lines = []
+                    skip_section = False
+
+                    for line in lines:
+                        if '# Personal CCCam Lines' in line:
+                            skip_section = True
+                            continue
+                        elif skip_section and line.strip() and not line.startswith('#'):
+                            continue
+                        elif skip_section and not line.strip():
+                            skip_section = False
+                            continue
+                        else:
+                            filtered_lines.append(line)
+
+                    # Rebuild content
+                    new_content = '\n'.join(filtered_lines).strip()
+
+                    # Add new personal lines only if not already present
+                    if cccam_content not in new_content:
+                        if new_content:
+                            new_content += '\n\n# Personal CCCam Lines\n'
+                        else:
+                            new_content = '# Personal CCCam Lines\n'
+                        new_content += cccam_content
+
+                    with open(cccam_path, 'w') as f:
+                        f.write(new_content + '\n')
+
+                    print("DEBUG: Added personal CCCam lines to %s" % cccam_path)
+
+    print("DEBUG: Conversion to OSCam/NCam handled by FCA.sh")
+
     if exists(OSCAM_PERSONAL):
         with open(OSCAM_PERSONAL, 'r') as f:
-            oscam_personal_content = f.read().strip()
+            oscam_content = f.read().strip()
 
-        if oscam_personal_content:
+        if oscam_content:
             oscam_paths = findOscam()
             for oscam_path in oscam_paths:
                 oscam_path = oscam_path.strip()
                 if exists(oscam_path):
-                    with open(oscam_path, 'a') as f:
-                        f.write('\n# Personal OSCam Configuration\n')
-                        f.write(oscam_personal_content + '\n')
-                    print("DEBUG: Personal OSCam configuration added to", oscam_path)
+                    # Read the current content
+                    with open(oscam_path, 'r') as f:
+                        current_content = f.read()
 
-    # Add personal NCam configuration
+                    # Remove previous personal section
+                    if '# Personal OSCam Configuration' in current_content:
+                        # Find and remove the existing personal section
+                        sections = current_content.split('# Personal OSCam Configuration')
+                        if len(sections) > 1:
+                            # Keep only the part before the personal section
+                            base_content = sections[0].strip()
+                            # Remove any trailing empty lines
+                            base_content = base_content.rstrip()
+                        else:
+                            base_content = current_content
+                    else:
+                        base_content = current_content.strip()
+
+                    # Add new personal lines ONLY IF they are not already present
+                    if oscam_content not in base_content:
+                        if base_content:
+                            new_content = base_content + '\n\n# Personal OSCam Configuration\n'
+                        else:
+                            new_content = '# Personal OSCam Configuration\n'
+                        new_content += oscam_content + '\n'
+
+                        with open(oscam_path, 'w') as f:
+                            f.write(new_content)
+                        print("DEBUG: Added/updated personal OSCam config to", oscam_path)
+
     if exists(NCAM_PERSONAL):
         with open(NCAM_PERSONAL, 'r') as f:
-            ncam_personal_content = f.read().strip()
+            ncam_content = f.read().strip()
 
-        if ncam_personal_content:
+        if ncam_content:
             ncam_paths = [
                 '/etc/tuxbox/config/ncam.server',
                 '/etc/tuxbox/config/ncam/ncam.server'
             ]
             for ncam_path in ncam_paths:
                 if exists(ncam_path):
-                    with open(ncam_path, 'a') as f:
-                        f.write('\n# Personal NCam Configuration\n')
-                        f.write(ncam_personal_content + '\n')
-                    print("DEBUG: Personal NCam configuration added to", ncam_path)
+                    # Read the current content
+                    with open(ncam_path, 'r') as f:
+                        current_content = f.read()
+
+                    # Remove previous personal section
+                    if '# Personal NCam Configuration' in current_content:
+                        sections = current_content.split('# Personal NCam Configuration')
+                        if len(sections) > 1:
+                            base_content = sections[0].strip()
+                            base_content = base_content.rstrip()
+                        else:
+                            base_content = current_content
+                    else:
+                        base_content = current_content.strip()
+
+                    # Add new personal lines ONLY IF they are not already present
+                    if ncam_content not in base_content:
+                        if base_content:
+                            new_content = base_content + '\n\n# Personal NCam Configuration\n'
+                        else:
+                            new_content = '# Personal NCam Configuration\n'
+                        new_content += ncam_content + '\n'
+
+                        with open(ncam_path, 'w') as f:
+                            f.write(new_content)
+                        print("DEBUG: Added/updated personal NCam config to %s" % ncam_path)
+
+    print("DEBUG: Personal lines addition completed - FCA.sh will handle OSCam/NCam conversion")
 
 
-# recoded from lululla
+def append_servers_to_config_file(file_path, servers, cam_type):
+    """APPEND personal servers to specific config file without overwriting"""
+    try:
+        # Read existing content
+        existing_content = ""
+        if exists(file_path):
+            with open(file_path, 'r') as f:
+                existing_content = f.read()
+
+        # Remove old personal converted sections to avoid duplicates
+        lines = existing_content.split('\n')
+        filtered_lines = []
+        skip_personal = False
+
+        for line in lines:
+            if '# Personal Converted CCcam servers' in line:
+                skip_personal = True
+                continue
+            elif skip_personal and line.strip() and not line.startswith('['):
+                continue
+            elif skip_personal and line.startswith('['):
+                skip_personal = False
+                filtered_lines.append(line)
+            elif not skip_personal:
+                filtered_lines.append(line)
+
+        # Rebuild base content
+        base_content = '\n'.join(filtered_lines).strip()
+
+        # APPEND new personal converted servers
+        new_content = base_content
+        if new_content:
+            new_content += '\n\n'
+
+        new_content += '# Personal Converted CCcam servers\n'
+        for server in servers:
+            new_content += server + '\n'
+
+        # Write file
+        with open(file_path, 'w') as f:
+            f.write(new_content)
+
+        print("DEBUG: Appended personal servers to %s" % file_path)
+
+    except Exception as e:
+        print("DEBUG: Error writing to %s: %s" % (file_path, str(e)))
+
+
 def findCccam():
-    search_dirs = ['/etc']  # ['/usr', '/var', '/etc', '/etc/tuxbox/']
+    search_dirs = ['/etc']
     paths = []
     for directory in search_dirs:
         cmd = 'find %s -name "CCcam.cfg"' % directory
         try:
-            res = subprocess.check_output(cmd, shell=True, stderr=subprocess.PIPE).decode().strip()
+            if PY3:
+                res = subprocess.check_output(cmd, shell=True, stderr=subprocess.PIPE).decode().strip()
+            else:
+                res = subprocess.check_output(cmd, shell=True, stderr=subprocess.PIPE).strip()
             if res:
                 paths.extend(res.splitlines())
         except subprocess.CalledProcessError:
@@ -219,7 +316,7 @@ def prependToFile(file_pathx):
     """
     directory = dirname(file_pathx)
     if not exists(directory):
-        print("DEBUG: Directory not exixts", file_pathx)
+        print("DEBUG: Directory not exists", file_pathx)
         return ""
 
     backup_path = file_pathx + "Orig"
@@ -230,19 +327,19 @@ def prependToFile(file_pathx):
             original_content = f.read()
         with open(backup_path, 'w') as f:
             f.write(original_content)
-        print("DEBUG: Mke backup for", file_pathx)
+        print("DEBUG: Made backup for %s" % file_pathx)
     elif exists(backup_path):
         with open(backup_path, 'r') as f:
             original_content = f.read()
-        print("DEBUG: Reads backup", file_pathx)
+        print("DEBUG: Read backup %s" % file_pathx)
 
     marker_start = "### ORIGINAL START ###"
     marker_end = "### ORIGINAL END ###"
     if marker_start not in original_content:
         original_content = marker_start + "\n" + original_content.strip() + "\n" + marker_end + "\n"
-        print("DEBUG: Add marker to backup", file_pathx)
+        print("DEBUG: Added marker to backup %s" % file_pathx)
     else:
-        print("DEBUG: Marker is present nel backup", file_pathx)
+        print("DEBUG: Marker present in backup %s" % file_pathx)
 
     return original_content
 
@@ -300,18 +397,17 @@ class MainMenus(Screen):
     # Constructor to initialize the MainMenus screen
     def __init__(self, session):
         self.session = session
-        Screen.__init__(self, session)  # Initialize the base class
+        Screen.__init__(self, session)
         if not exists("/usr/script"):
             mkdir("/usr/script", 0o755)
-        self.initUI()  # Set up the user interface
-        self.initActions()  # Set up the actions (key mappings)
-        self.selectedIcon = 1  # Start with the first icon selected
-        self.script_running = threading.Event()  # Event to manage script running state
-        self.updateSelection()  # Update the selection display
+        self.initUI()
+        self.initActions()
+        self.selectedIcon = 1
+        self.script_running = threading.Event()
+        self.updateSelection()
         self.my_crond_run = False
-        self.on_init_cron()  # Set up init CronTimer
+        self.on_init_cron()
 
-    # Initialize the user interface elements
     def initUI(self):
         # Set up cront
         self["lab2"] = Label(_("CronTime Current Status:"))
@@ -363,7 +459,7 @@ class MainMenus(Screen):
             self.session.open(SubMenu, "Tools", [
                 ("Free Cline Access", self.askForUserPreference),
                 ("Update FCA Script", self.askForUpdateFca),
-                ("Save Personal Lines", self.savePersonalLines)
+                ("Save Personal Lines", self.savePersonalLines)  # recoded from lululla
             ])
         elif self.selectedIcon == 2:
             self.session.open(SubMenu, "Extras", [
@@ -402,7 +498,7 @@ class MainMenus(Screen):
             self.session.open(SubMenu, "Cronotabs", [
                 ("CronTimer Install", self.installcron),
                 ("CronTimer Start", self.crondStart),
-                ("CronTimer Stop", self.crondStart),
+                ("CronTimer Stop", self.crondStop),
             ])
 
         elif self.selectedIcon == 5:
@@ -413,37 +509,24 @@ class MainMenus(Screen):
             ])
 
     def savePersonalLines(self):
-        """Save your personal lines before upgrading"""
+        """Save personal lines from text files"""
         self.session.openWithCallback(
             self.confirmSavePersonalLines,
             MessageBox,
-            "Do you want to save your personal CCCam/OSCam/NCam lines?\nThis will create backup files that will be automatically added after updates.",
+            "This will copy your personal line files (cccamx.txt, oscamx.txt, ncamx.txt) to the personal lines directory.\n\nThese lines will be automatically added after each update.",
             MessageBox.TYPE_YESNO
         )
 
     def confirmSavePersonalLines(self, confirmed):
         if confirmed:
-            cccam_saved = save_personal_cccam_line()
-            oscam_saved = save_personal_oscam_line()
-            ncam_saved = save_personal_ncam_line()
-
-            message = "Personal lines saved:\n"
-            if cccam_saved:
-                message += "- CCCam: ✓\n"
+            files_copied = save_personal_lines_from_files()
+            if files_copied:
+                message = "Personal lines saved from:\n"
+                for file in files_copied:
+                    message += "- " + file + "\n"
+                message += "\nThey will be automatically added after each update."
             else:
-                message += "- CCCam: ✗ (no personal line found)\n"
-
-            if oscam_saved:
-                message += "- OSCam: ✓\n"
-            else:
-                message += "- OSCam: ✗ (no config found)\n"
-
-            if ncam_saved:
-                message += "- NCam: ✓\n"
-            else:
-                message += "- NCam: ✗ (no config found)\n"
-
-            message += "\nThese lines will be automatically added after each update."
+                message = "No personal line files found!\n\nPlease create one of these files:\n- /etc/cccamx.txt\n- /etc/oscamx.txt\n- /etc/ncamx.txt\n\nwith your personal C-lines and try again."
             self.session.open(MessageBox, message, MessageBox.TYPE_INFO, timeout=10)
 
     # recoded from lululla Prompts the user to confirm the installation of crontimer
@@ -456,7 +539,7 @@ class MainMenus(Screen):
 
     def on_init_cron(self):
         crond_process = self.is_crond_running()
-        print("DEBUG: crond_process =", crond_process)
+        print("DEBUG: crond_process = %s" % crond_process)
         self["labrun"].hide()
         self["labstop"].hide()
         self.my_crond_run = crond_process
@@ -483,7 +566,7 @@ class MainMenus(Screen):
 
     def startStopCallback(self, result=None, retval=None, extra_args=None):
         from time import sleep
-        print("DEBUG: Callback triggered -> result={}, retval={}, extra_args={}".format(result, retval, extra_args))
+        print("DEBUG: Callback triggered -> result=%s, retval=%s, extra_args=%s" % (result, retval, extra_args))
         sleep(3)
         self.on_init_cron()
 
@@ -494,20 +577,19 @@ class MainMenus(Screen):
             command = "mkdir -p /etc/cron/crontabs;cp %s %s && chmod +x %s" % (source, destination, destination)
             self.session.open(Console, _("Installing cron job script..."), [command])
 
-    # Update the selection display based on the currently selected icon
     def updateSelection(self):
         descriptions = ["Tools", "Extras", "Settings", "CronTimer", "Help"]
-        self["detail"].hide()  # Hide detail by default
+        self["detail"].hide()
         for i in range(1, 6):
-            self["icon" + str(i)].show()  # Show all icons
+            self["icon%s" % i].show()
             if i == self.selectedIcon:
-                # Highlight the selected icon
-                self["desc" + str(i)].setText("^" + descriptions[i - 1] + "^")
-                self["detail"].setText(self["detail" + str(i)].getText())  # Update detail text
-                self["detail"].show()  # Show detail text
+
+                self["desc%s" % i].setText("^" + descriptions[i - 1] + "^")
+                self["detail"].setText(self["detail%s" % i].getText())
+                self["detail"].show()
             else:
-                # Set default description for non-selected icons
-                self["desc" + str(i)].setText(descriptions[i - 1])
+
+                self["desc%s" % i].setText(descriptions[i - 1])
 
     # Handle Left key press # fixed lululla
     def keyLeft(self):
@@ -552,7 +634,7 @@ class MainMenus(Screen):
     # Handles the confirmation for installing FCA Script from Lululla git # fixed lululla
     def UpdateFca(self, confirmed):
         if confirmed:
-            # First save your personal lines if they exist
+            # First add personal lines if they exist
             add_personal_lines_to_configs()
 
             # Then update the script
@@ -565,24 +647,25 @@ class MainMenus(Screen):
 
     # recoded from lululla # fixed lululla
     def runScriptWithPreference(self, confirmed):
-        # First add your personal lines if they exist
+        # First add personal lines if they exist
         add_personal_lines_to_configs()
 
-        # Find the configuration files
+        # Find configuration files
         print("DEBUG: Find CCcam file...")
         cccam_paths = findCccam()
-        print("DEBUG: cccam_paths =", cccam_paths)
+        print("DEBUG: cccam_paths = %s" % cccam_paths)
         print("DEBUG: Find Oscam file...")
         oscam_paths = findOscam()
-        print("DEBUG: oscam_paths =", oscam_paths)
-        # Step 1: Save backup (original with marker) BEFORE running the script
+        print("DEBUG: oscam_paths = %s" % oscam_paths)
+
+        # Step 1: Save backup before running script
         self.cccam_original_content = {}
         for cccam_path in set(cccam_paths):
             cccam_path = cccam_path.strip()
             if cccam_path:
                 backup = prependToFile(cccam_path)
                 self.cccam_original_content[cccam_path] = backup
-                print("DEBUG: Backup per", cccam_path)
+                print("DEBUG: Backup for %s" % cccam_path)
 
         self.oscam_original_content = {}
         for oscam_path in set(oscam_paths):
@@ -590,7 +673,7 @@ class MainMenus(Screen):
             if oscam_path:
                 backup = prependToFile(oscam_path)
                 self.oscam_original_content[oscam_path] = backup
-                print("DEBUG: Backup per", oscam_path)
+                print("DEBUG: Backup for %s" % oscam_path)
 
         # Step 2: Execute script
         if confirmed:
@@ -601,7 +684,7 @@ class MainMenus(Screen):
             self.runScriptInBackground()
 
     def runScriptWithConsole(self):  # fixed lululla
-        # script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
+
         if exists(script_path):
             chmod(script_path, 0o777)
             self.session.open(Console,
@@ -616,36 +699,36 @@ class MainMenus(Screen):
                               timeout=10)
 
     def scriptFinished(self, result=None):  # fixed lululla
-        print("DEBUG: Script finished, I proceed with updating the files.")
+        print("DEBUG: Script finished, proceeding with file updates.")
         self.updateFilesWithBackup()
 
     def updateFilesWithBackup(self):  # fixed lululla
         for cccam_path, backup in self.cccam_original_content.items():
             ensure_directory_exists(cccam_path)
             new_content_raw = saveFileContent(cccam_path).strip()
-            print("DEBUG: New content RAW for", cccam_path)
-            # print(new_content_raw)
+            print("DEBUG: New content RAW for %s" % cccam_path)
+
             new_content = remove_backup_block(new_content_raw)
             final_content = backup.strip() + "\n" + new_content
-            print("DEBUG: Final content for", cccam_path)
-            # print(final_content)
+            print("DEBUG: Final content for %s" % cccam_path)
+
             with open(cccam_path, 'w') as f:
                 f.write(final_content.strip() + "\n")
 
         for oscam_path, backup in self.oscam_original_content.items():
             ensure_directory_exists(oscam_path)
             new_content_raw = saveFileContent(oscam_path).strip()
-            print("DEBUG: New content RAW for", oscam_path)
-            # print(new_content_raw)
+            print("DEBUG: New content RAW for %s" % oscam_path)
+
             new_content = remove_backup_block(new_content_raw)
             final_content = backup.strip() + "\n" + new_content
-            print("DEBUG: Final content for", oscam_path)
-            # print(final_content)
+            print("DEBUG: Final content for %s" % oscam_path)
+
             if exists(oscam_path):
                 with open(oscam_path, 'w') as f:
                     f.write(final_content.strip() + "\n")
 
-        # Add personal lines after upgrade
+        # Add personal lines after update
         add_personal_lines_to_configs()
         print("DEBUG: EXECUTION FINISHED")
 
@@ -655,7 +738,7 @@ class MainMenus(Screen):
             self.session.open(MessageBox, "Please wait, the process is still running!", MessageBox.TYPE_INFO, timeout=5)
             return
         self.script_running.set()
-        # script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
+
         chmod(script_path, 0o777)
         threading.Thread(target=self.executeScript, args=(script_path,)).start()
         self.session.open(MessageBox, "Process has started. Please wait for completion!", MessageBox.TYPE_INFO, timeout=10)
@@ -839,44 +922,83 @@ class MainMenus(Screen):
             ("A1: The Simple ZOOM Panel plugin provides a user-friendly interface to access various tools, extras, settings, and help for your Enigma2-based system.\n\n") +
             ("Q2: How do I set up the automatic installation of servers?\n") +
             ("A2: Use CRON. In CRON, select the AUTFCA.sh script and choose your desired time.\n\n") +
-            ("Q3: How do I set up my personal lines?\n") +
-            ("A3: Use one of the DATAx (You have to manually install it in dependencies!. Also there must be no cccam.cfg oscam and cccam datax files!) file in /etc/ directory. You can choose between CCCAM and OSCAM. Now every time you use Free Cline Access it will also add your personal lines.\n\n") +
+            ("Personal Lines Management\n") +
+            ("Q3: How do I set up and use my personal lines?\n") +
+            ("A3: You have two options:\n\n") +
+            ("OPTION 1 - Manual Files:\n") +
+            ("• Create /etc/cccamx.txt with your C-lines (CCcam format)\n") +
+            ("• Create /etc/oscamx.txt with your OSCam readers\n") +
+            ("• Create /etc/ncamx.txt with your NCam readers\n") +
+            ("• Use 'Save Personal Lines' in Tools menu to save them\n\n") +
+            ("OPTION 2 - Automatic Extraction:\n") +
+            ("• Use 'Save Personal Lines' to automatically extract personal lines\n") +
+            ("• from your existing CCcam.cfg and oscam.server files\n") +
+            ("• The system will filter out free servers and keep only personal lines\n\n") +
+            ("Q4: When are my personal lines added?\n") +
+            ("A4: Your personal lines are automatically added after:\n") +
+            ("• Free Cline Access updates\n") +
+            ("• FCA Script updates\n") +
+            ("• Panel updates\n") +
+            ("• Manual execution of Save Personal Lines\n\n") +
+            ("Q5: I see duplicate readers in my config, what should I do?\n") +
+            ("A5: This happens if you run 'Save Personal Lines' multiple times.\n") +
+            ("Solution: Edit your config file and remove duplicate sections,\n") +
+            ("then use Save Personal Lines again. The system will prevent\n") +
+            ("future duplications.\n\n") +
             ("Installation and Setup\n") +
-            ("Q4: How do I install the Simple ZOOM Panel plugin?\n") +
-            ("A4: The plugin can be installed from the IPK. Ensure you have the necessary permissions and dependencies to install the plugin.\n\n") +
+            ("Q6: How do I install the Simple ZOOM Panel plugin?\n") +
+            ("A6: The plugin can be installed from the IPK. Ensure you have the necessary permissions and dependencies to install the plugin.\n\n") +
             ("Usage\n") +
-            ("Q5: How do I navigate through the Simple ZOOM Panel menu?\n") +
-            ("A5: Use the left and right arrow keys to navigate between different icons (Tools, Extras, Settings, Help). Press the OK button to select an option. The red, green, yellow, and blue buttons also correspond to specific menu options.\n\n") +
-            ("Q6: What actions are available in each menu?\n") +
-            ("A6:\n") +
-            ("- Tools: Access utility tools like Free Cline Access.\n") +
-            ("- Extras: Install and manage addons such as AJPanel, SatVenusPanel, and media extensions like ArchivCZSK.\n") +
-            ("- Settings: Update the panel.\n") +
-            ("- Help: Access FAQs, support, and information.\n\n") +
+            ("Q7: How do I navigate through the Simple ZOOM Panel menu?\n") +
+            ("A7: Use the left and right arrow keys to navigate between different icons (Tools, Extras, Settings, Help). Press the OK button to select an option. The red, green, yellow, and blue buttons also correspond to specific menu options.\n\n") +
+            ("Q8: What actions are available in each menu?\n") +
+            ("A8:\n") +
+            ("- Tools: Free Cline Access, Update FCA Script, Save Personal Lines\n") +
+            ("- Extras: Install addons, media players, dependencies, and CAMs\n") +
+            ("- Settings: Update the panel\n") +
+            ("- CronTimer: Manage automatic script execution\n") +
+            ("- Help: Access FAQs, support, and information\n\n") +
             ("Script Execution\n") +
-            ("Q7: How do I execute scripts from the Simple ZOOM Panel?\n") +
-            ("A7: Selecting certain tools or addons will prompt you to run scripts. You can choose to view the process in a console or let it run in the background. The plugin ensures you are informed about the status and completion of the scripts.\n\n") +
-            ("Q8: What happens if a script is already running?\n") +
-            ("A8: If a script is already running, you will receive a message informing you to wait until the current process is completed.\n\n") +
+            ("Q9: How do I execute scripts from the Simple ZOOM Panel?\n") +
+            ("A9: Selecting certain tools or addons will prompt you to run scripts. You can choose to view the process in a console or let it run in the background. The plugin ensures you are informed about the status and completion of the scripts.\n\n") +
+            ("Q10: What happens if a script is already running?\n") +
+            ("A10: If a script is already running, you will receive a message informing you to wait until the current process is completed.\n\n") +
             ("Troubleshooting\n") +
-            ("Q9: I encountered an error while running a script. What should I do?\n") +
-            ("A9: If an error occurs during script execution, the plugin will display the error message. Check the message for details and ensure all dependencies are installed. You can also review the script output if necessary.\n\n") +
-            ("Q10: The plugin says \"This option is not yet implemented.\" What does this mean?\n") +
-            ("A10: This message indicates that the selected feature is planned but not yet available in the current version of the plugin.\n\n") +
+            ("Q11: I encountered an error while running a script. What should I do?\n") +
+            ("A11: If an error occurs during script execution, the plugin will display the error message. Check the message for details and ensure all dependencies are installed. You can also review the script output if necessary.\n\n") +
+            ("Q12: My personal lines are not being saved/added. What's wrong?\n") +
+            ("A12: Check the following:\n") +
+            ("• File permissions: Ensure you can write to /etc/personal_lines/\n") +
+            ("• File format: C-lines must start with 'C: ' for CCcam\n") +
+            ("• File location: Place files in /etc/cccamx.txt or /usr/script/cccamx.txt\n") +
+            ("• Content: Files must contain valid configuration lines\n\n") +
+            ("Q13: The plugin says \"This option is not yet implemented.\" What does this mean?\n") +
+            ("A13: This message indicates that the selected feature is planned but not yet available in the current version of the plugin.\n\n") +
             ("Advanced Features\n") +
-            ("Q11: How do I install additional components like CURL, WGET, etc.? \n") +
-            ("A11: Navigate to the Extras menu, select the component you wish to install, and follow the prompts. Confirm your action, and the plugin will handle the installation process.\n\n") +
-            ("Q12: The \"HomeMade\" config is used for what?\n") +
-            ("A12: It is an optimized OSCam config for free servers. Note that this config may not always be the best option, and you may need to configure your own.\n\n") +
+            ("Q14: How do I install additional components like CURL, WGET, etc.? \n") +
+            ("A14: Navigate to the Extras menu, select the component you wish to install, and follow the prompts. Confirm your action, and the plugin will handle the installation process.\n\n") +
+            ("Q15: The \"HomeMade\" config is used for what?\n") +
+            ("A15: It is an optimized OSCam config for free servers. Note that this config may not always be the best option, and you may need to configure your own.\n\n") +
+            ("Q16: How does CronTimer work with personal lines?\n") +
+            ("A16: When CronTimer runs automatic updates, it will preserve your\n") +
+            ("personal lines and add them back after updating free servers.\n\n") +
+            ("File Locations Reference\n") +
+            ("Q17: Where are the personal line files stored?\n") +
+            ("A17:\n") +
+            ("• Input files: /etc/cccamx.txt, /etc/oscamx.txt, /etc/ncamx.txt\n") +
+            ("• Backup files: /etc/personal_lines/cccamx, etc.\n") +
+            ("• CCcam config: /etc/CCcam.cfg\n") +
+            ("• OSCam config: /etc/tuxbox/config/oscam.server\n") +
+            ("• NCam config: /etc/tuxbox/config/ncam.server\n\n") +
             ("Customization\n") +
-            ("Q13: Can I customize the plugin's appearance or functionality?\n") +
-            ("A13: Currently, the plugin does not support customization of its appearance. However, you can suggest new features or improvements to the developer.\n\n") +
+            ("Q18: Can I customize the plugin's appearance or functionality?\n") +
+            ("A18: Currently, the plugin does not support customization of its appearance. However, you can suggest new features or improvements to the developer.\n\n") +
             ("Development and Contribution\n") +
-            ("Q14: I am a developer. How can I contribute to the Simple ZOOM Panel plugin?\n") +
-            ("A14: Contributions are welcome. Review the plugin's source code to understand its structure and functionality. You can contribute by adding new features, fixing bugs, or improving documentation. Contact me for more details.\n\n") +
+            ("Q19: I am a developer. How can I contribute to the Simple ZOOM Panel plugin?\n") +
+            ("A19: Contributions are welcome. Review the plugin's source code to understand its structure and functionality. You can contribute by adding new features, fixing bugs, or improving documentation. Contact me for more details.\n\n") +
             ("Contact and Support\n") +
-            ("Q15: Where can I get help if I encounter issues with the plugin?\n") +
-            ("A15: Visit the Help section within the plugin for FAQs, contact information, and support options. You can also reach out to the Enigma2 community on linuxSatSupport for additional assistance.\n")
+            ("Q20: Where can I get help if I encounter issues with the plugin?\n") +
+            ("A20: Visit the Help section within the plugin for FAQs, contact information, and support options. You can also reach out to the Enigma2 community on linuxSatSupport for additional assistance.\n")
         )
 
         PAGE_SIZE = 800
@@ -888,7 +1010,7 @@ class MainMenus(Screen):
     # recoded from lululla
     def showOutputPages(self, pages, current_page):
         if current_page < len(pages):
-            message = "Script output (Page {} / {}):\n{}".format(current_page + 1, len(pages), pages[current_page])
+            message = "Script output (Page %s / %s):\n%s" % (current_page + 1, len(pages), pages[current_page])
             try:
                 self.session.openWithCallback(
                     lambda ret: self.showOutputPages(pages, current_page + 1 if ret else max(current_page - 1, 0)),
@@ -897,7 +1019,7 @@ class MainMenus(Screen):
                     MessageBox.TYPE_INFO
                 )
             except Exception as e:
-                print("Error opening MessageBox:", str(e))
+                print("Error opening MessageBox: %s" % str(e))
 
     # Provides contact information for support
     def contactSupport(self):
@@ -976,7 +1098,6 @@ class SubMenu(Screen):
             "cancel": self.close
         }, -1)
 
-    # Handles the OK button click in the submenu
     def okClicked(self):
         choiceIndex = self["menu"].getSelectionIndex()
         choice = self.menuItems[choiceIndex]
