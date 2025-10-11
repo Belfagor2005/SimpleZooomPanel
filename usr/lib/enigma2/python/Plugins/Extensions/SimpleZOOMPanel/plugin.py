@@ -48,43 +48,102 @@ def save_personal_lines_from_files():
     """Copy personal line files to personal_lines directory"""
     ensure_personal_lines_dir()
 
+    print("DEBUG: ===== SAVE PERSONAL LINES START =====")
+    print("DEBUG: Personal lines dir:", PERSONAL_LINES_DIR)
+
     files_copied = []
 
-    # Search and copy personal line files
+    # Cerca e copia file di linee personali da /tmp/ e /etc/personal_lines/
     personal_files = [
-        ('/etc/cccamx.txt', CCCAM_PERSONAL),
-        ('/etc/oscamx.txt', OSCAM_PERSONAL),
-        ('/etc/ncamx.txt', NCAM_PERSONAL),
-        ('/usr/script/cccamx.txt', CCCAM_PERSONAL),
-        ('/usr/script/oscamx.txt', OSCAM_PERSONAL),
-        ('/usr/script/ncamx.txt', NCAM_PERSONAL),
         ('/tmp/cccamx.txt', CCCAM_PERSONAL),
         ('/tmp/oscamx.txt', OSCAM_PERSONAL),
-        ('/tmp/ncamx.txt', NCAM_PERSONAL)
+        ('/tmp/ncamx.txt', NCAM_PERSONAL),
+        ('/etc/personal_lines/cccamx.txt', CCCAM_PERSONAL),
+        ('/etc/personal_lines/oscamx.txt', OSCAM_PERSONAL),
+        ('/etc/personal_lines/ncamx.txt', NCAM_PERSONAL),
     ]
 
+    print("DEBUG: Searching for personal line files...")
     for source, destination in personal_files:
+        print("DEBUG: Checking source:", source, "-> exists:", exists(source))
         if exists(source):
             try:
                 with open(source, 'r') as f:
                     content = f.read().strip()
+                print("DEBUG: Found file:", source, "Content length:", len(content))
 
                 if content:
                     with open(destination, 'w') as f:
                         f.write(content)
                     files_copied.append(source)
                     print("DEBUG: Copied %s to %s" % (source, destination))
+                else:
+                    print("DEBUG: File", source, "is empty")
             except Exception as e:
                 print("DEBUG: Error copying %s: %s" % (source, str(e)))
+        else:
+            print("DEBUG: Source not found:", source)
+
+    print("DEBUG: Files copied:", files_copied)
+    print("DEBUG: CCCAM_PERSONAL exists:", exists(CCCAM_PERSONAL))
+    print("DEBUG: OSCAM_PERSONAL exists:", exists(OSCAM_PERSONAL))
+    print("DEBUG: NCAM_PERSONAL exists:", exists(NCAM_PERSONAL))
+    print("DEBUG: ===== SAVE PERSONAL LINES END =====")
 
     return files_copied
+
+
+def save_personal_cccam_line():  # not used
+    """Save the personal CCCam line from the CCcam.cfg file"""
+    ensure_personal_lines_dir()
+    cccam_paths = findCccam()
+
+    personal_lines_found = False
+
+    for cccam_path in cccam_paths:
+        cccam_path = cccam_path.strip()
+        if exists(cccam_path):
+            print("DEBUG: Reading CCCam file: %s" % cccam_path)
+            with open(cccam_path, 'r') as f:
+                content = f.read()
+
+            # Cerca manualmente le linee personali (senza extract_personal_cccam_lines)
+            lines = content.split('\n')
+            personal_lines = []
+
+            for line in lines:
+                line = line.strip()
+                # Prendi solo linee C: che non sono commenti e non contengono keyword dei server free
+                if (line.startswith('C: ') and
+                        not line.startswith('#') and
+                        'free' not in line.lower() and
+                        'test' not in line.lower() and
+                        'server' not in line.lower()):
+                    personal_lines.append(line)
+
+            if personal_lines:
+                with open(CCCAM_PERSONAL, 'w') as f:
+                    f.write('\n'.join(personal_lines))
+                print("DEBUG: Personal CCCam lines saved to: %s" % CCCAM_PERSONAL)
+                print("DEBUG: Found %s personal CCCam lines" % len(personal_lines))
+                personal_lines_found = True
+                break  # Prendi solo dal primo file valido
+            else:
+                print("DEBUG: No personal CCCam lines found in: %s" % cccam_path)
+
+    # Se non trova linee personali ma il file esiste già, mantienilo
+    if not personal_lines_found and exists(CCCAM_PERSONAL):
+        print("DEBUG: Keeping existing personal CCCam file")
+        return True
+
+    return personal_lines_found
 
 
 def add_personal_lines_to_configs():
     """Add personal lines to configuration files - FCA.sh will handle conversion"""
     ensure_personal_lines_dir()
     print("DEBUG: Adding personal lines to configs - FCA.sh will handle OSCam/NCam conversion")
-    
+
     # Add personal CCCam lines to CCcam.cfg ONLY
     # FCA.sh will automatically convert everything to OSCam/NCam
     if exists(CCCAM_PERSONAL):
@@ -215,7 +274,7 @@ def add_personal_lines_to_configs():
     print("DEBUG: Personal lines addition completed - FCA.sh will handle OSCam/NCam conversion")
 
 
-def append_servers_to_config_file(file_path, servers, cam_type):
+def append_servers_to_config_file(file_path, servers, cam_type):  # not used
     """APPEND personal servers to specific config file without overwriting"""
     try:
         # Read existing content
@@ -261,6 +320,46 @@ def append_servers_to_config_file(file_path, servers, cam_type):
 
     except Exception as e:
         print("DEBUG: Error writing to %s: %s" % (file_path, str(e)))
+
+
+def extract_personal_cccam_lines(content):  # not used
+    """Extract personal C: lines from CCcam.cfg content"""
+    lines = content.split('\n')
+    personal_lines = []
+
+    for line in lines:
+        line = line.strip()
+        # Take only C: lines that are not comments and do not contain free server keywords
+        if (line.startswith('C: ') and
+                not line.startswith('#') and
+                'free' not in line.lower() and
+                'test' not in line.lower() and
+                'server' not in line.lower()):
+            personal_lines.append(line)
+
+    return personal_lines
+
+
+def confirmSavePersonalLines(self, confirmed):
+    if confirmed:
+        success = save_personal_lines_from_files()
+
+        if success:
+            message = "Personal lines saved successfully!\n\n"
+            if exists(CCCAM_PERSONAL):
+                with open(CCCAM_PERSONAL, 'r') as f:
+                    content = f.read().strip()
+                if content:
+                    message += "CCCam lines: ✓ (%s lines)\n" % len(content.split('\n'))
+            if exists(OSCAM_PERSONAL):
+                message += "OSCam config: ✓\n"
+            if exists(NCAM_PERSONAL):
+                message += "NCam config: ✓\n"
+            message += "\nThese lines will be automatically added after each update."
+        else:
+            message = "No personal line files found!\n\nPlease create one of these files:\n- /tmp/cccamx.txt\n- /etc/personal_lines/cccamx.txt\n\nwith your personal C-lines and try again."
+
+        self.session.open(MessageBox, message, MessageBox.TYPE_INFO, timeout=10)
 
 
 def findCccam():
