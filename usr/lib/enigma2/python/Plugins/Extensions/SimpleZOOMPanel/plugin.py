@@ -140,12 +140,11 @@ def save_personal_cccam_line():  # not used
 
 
 def add_personal_lines_to_configs():
-    """Add personal lines to configuration files - FCA.sh will handle conversion"""
+    """Add personal lines to configuration files"""
     ensure_personal_lines_dir()
-    print("DEBUG: Adding personal lines to configs - FCA.sh will handle OSCam/NCam conversion")
+    print("DEBUG: Adding personal lines to configs...")
 
-    # Add personal CCCam lines to CCcam.cfg ONLY
-    # FCA.sh will automatically convert everything to OSCam/NCam
+    # Add personal CCCam lines to CCcam.cfg
     if exists(CCCAM_PERSONAL):
         with open(CCCAM_PERSONAL, 'r') as f:
             cccam_content = f.read().strip()
@@ -192,86 +191,145 @@ def add_personal_lines_to_configs():
 
                     print("DEBUG: Added personal CCCam lines to %s" % cccam_path)
 
-    print("DEBUG: Conversion to OSCam/NCam handled by FCA.sh")
+    # CONVERT ONLY PERSONAL LINES TO OSCAM/NCAM FORMAT
+    convert_only_personal_c_lines()
 
-    if exists(OSCAM_PERSONAL):
-        with open(OSCAM_PERSONAL, 'r') as f:
-            oscam_content = f.read().strip()
+    print("DEBUG: Personal lines addition completed")
 
-        if oscam_content:
-            oscam_paths = findOscam()
-            for oscam_path in oscam_paths:
-                oscam_path = oscam_path.strip()
-                if exists(oscam_path):
-                    # Read the current content
-                    with open(oscam_path, 'r') as f:
-                        current_content = f.read()
 
-                    # Remove previous personal section
-                    if '# Personal OSCam Configuration' in current_content:
-                        # Find and remove the existing personal section
-                        sections = current_content.split('# Personal OSCam Configuration')
-                        if len(sections) > 1:
-                            # Keep only the part before the personal section
-                            base_content = sections[0].strip()
-                            # Remove any trailing empty lines
-                            base_content = base_content.rstrip()
-                        else:
-                            base_content = current_content
-                    else:
-                        base_content = current_content.strip()
+# def add_personal_lines_to_configs():
+    # """Add personal lines to configuration files - FCA.sh will handle conversion"""
+    # ensure_personal_lines_dir()
+    # print("DEBUG: Adding personal lines to configs - FCA.sh will handle OSCam/NCam conversion")
 
-                    # Add new personal lines ONLY IF they are not already present
-                    if oscam_content not in base_content:
-                        if base_content:
-                            new_content = base_content + '\n\n# Personal OSCam Configuration\n'
-                        else:
-                            new_content = '# Personal OSCam Configuration\n'
-                        new_content += oscam_content + '\n'
+    # # Add personal CCCam lines to CCcam.cfg ONLY
+    # # FCA.sh will automatically convert everything to OSCam/NCam
+    # if exists(CCCAM_PERSONAL):
+        # with open(CCCAM_PERSONAL, 'r') as f:
+            # cccam_content = f.read().strip()
 
-                        with open(oscam_path, 'w') as f:
-                            f.write(new_content)
-                        print("DEBUG: Added/updated personal OSCam config to", oscam_path)
+        # if cccam_content:
+            # cccam_paths = findCccam()
+            # for cccam_path in cccam_paths:
+                # cccam_path = cccam_path.strip()
+                # if exists(cccam_path):
+                    # # Read current content
+                    # with open(cccam_path, 'r') as f:
+                        # current_content = f.read()
 
-    if exists(NCAM_PERSONAL):
-        with open(NCAM_PERSONAL, 'r') as f:
-            ncam_content = f.read().strip()
+                    # # Remove previous personal sections
+                    # lines = current_content.split('\n')
+                    # filtered_lines = []
+                    # skip_section = False
 
-        if ncam_content:
-            ncam_paths = [
-                '/etc/tuxbox/config/ncam.server',
-                '/etc/tuxbox/config/ncam/ncam.server'
-            ]
-            for ncam_path in ncam_paths:
-                if exists(ncam_path):
-                    # Read the current content
-                    with open(ncam_path, 'r') as f:
-                        current_content = f.read()
+                    # for line in lines:
+                        # if '# Personal CCCam Lines' in line:
+                            # skip_section = True
+                            # continue
+                        # elif skip_section and line.strip() and not line.startswith('#'):
+                            # continue
+                        # elif skip_section and not line.strip():
+                            # skip_section = False
+                            # continue
+                        # else:
+                            # filtered_lines.append(line)
 
-                    # Remove previous personal section
-                    if '# Personal NCam Configuration' in current_content:
-                        sections = current_content.split('# Personal NCam Configuration')
-                        if len(sections) > 1:
-                            base_content = sections[0].strip()
-                            base_content = base_content.rstrip()
-                        else:
-                            base_content = current_content
-                    else:
-                        base_content = current_content.strip()
+                    # # Rebuild content
+                    # new_content = '\n'.join(filtered_lines).strip()
 
-                    # Add new personal lines ONLY IF they are not already present
-                    if ncam_content not in base_content:
-                        if base_content:
-                            new_content = base_content + '\n\n# Personal NCam Configuration\n'
-                        else:
-                            new_content = '# Personal NCam Configuration\n'
-                        new_content += ncam_content + '\n'
+                    # # Add new personal lines only if not already present
+                    # if cccam_content not in new_content:
+                        # if new_content:
+                            # new_content += '\n\n# Personal CCCam Lines\n'
+                        # else:
+                            # new_content = '# Personal CCCam Lines\n'
+                        # new_content += cccam_content
 
-                        with open(ncam_path, 'w') as f:
-                            f.write(new_content)
-                        print("DEBUG: Added/updated personal NCam config to %s" % ncam_path)
+                    # with open(cccam_path, 'w') as f:
+                        # f.write(new_content + '\n')
 
-    print("DEBUG: Personal lines addition completed - FCA.sh will handle OSCam/NCam conversion")
+                    # print("DEBUG: Added personal CCCam lines to %s" % cccam_path)
+
+    # print("DEBUG: Conversion to OSCam/NCam handled by FCA.sh")
+
+    # if exists(OSCAM_PERSONAL):
+        # with open(OSCAM_PERSONAL, 'r') as f:
+            # oscam_content = f.read().strip()
+
+        # if oscam_content:
+            # oscam_paths = findOscam()
+            # for oscam_path in oscam_paths:
+                # oscam_path = oscam_path.strip()
+                # if exists(oscam_path):
+                    # # Read the current content
+                    # with open(oscam_path, 'r') as f:
+                        # current_content = f.read()
+
+                    # # Remove previous personal section
+                    # if '# Personal OSCam Configuration' in current_content:
+                        # # Find and remove the existing personal section
+                        # sections = current_content.split('# Personal OSCam Configuration')
+                        # if len(sections) > 1:
+                            # # Keep only the part before the personal section
+                            # base_content = sections[0].strip()
+                            # # Remove any trailing empty lines
+                            # base_content = base_content.rstrip()
+                        # else:
+                            # base_content = current_content
+                    # else:
+                        # base_content = current_content.strip()
+
+                    # # Add new personal lines ONLY IF they are not already present
+                    # if oscam_content not in base_content:
+                        # if base_content:
+                            # new_content = base_content + '\n\n# Personal OSCam Configuration\n'
+                        # else:
+                            # new_content = '# Personal OSCam Configuration\n'
+                        # new_content += oscam_content + '\n'
+
+                        # with open(oscam_path, 'w') as f:
+                            # f.write(new_content)
+                        # print("DEBUG: Added/updated personal OSCam config to", oscam_path)
+
+    # if exists(NCAM_PERSONAL):
+        # with open(NCAM_PERSONAL, 'r') as f:
+            # ncam_content = f.read().strip()
+
+        # if ncam_content:
+            # ncam_paths = [
+                # '/etc/tuxbox/config/ncam.server',
+                # '/etc/tuxbox/config/ncam/ncam.server'
+            # ]
+            # for ncam_path in ncam_paths:
+                # if exists(ncam_path):
+                    # # Read the current content
+                    # with open(ncam_path, 'r') as f:
+                        # current_content = f.read()
+
+                    # # Remove previous personal section
+                    # if '# Personal NCam Configuration' in current_content:
+                        # sections = current_content.split('# Personal NCam Configuration')
+                        # if len(sections) > 1:
+                            # base_content = sections[0].strip()
+                            # base_content = base_content.rstrip()
+                        # else:
+                            # base_content = current_content
+                    # else:
+                        # base_content = current_content.strip()
+
+                    # # Add new personal lines ONLY IF they are not already present
+                    # if ncam_content not in base_content:
+                        # if base_content:
+                            # new_content = base_content + '\n\n# Personal NCam Configuration\n'
+                        # else:
+                            # new_content = '# Personal NCam Configuration\n'
+                        # new_content += ncam_content + '\n'
+
+                        # with open(ncam_path, 'w') as f:
+                            # f.write(new_content)
+                        # print("DEBUG: Added/updated personal NCam config to %s" % ncam_path)
+
+    # print("DEBUG: Personal lines addition completed - FCA.sh will handle OSCam/NCam conversion")
 
 
 def append_servers_to_config_file(file_path, servers, cam_type):  # not used
@@ -313,6 +371,121 @@ def append_servers_to_config_file(file_path, servers, cam_type):  # not used
             new_content += server + '\n'
 
         # Write file
+        with open(file_path, 'w') as f:
+            f.write(new_content)
+
+        print("DEBUG: Appended personal servers to %s" % file_path)
+
+    except Exception as e:
+        print("DEBUG: Error writing to %s: %s" % (file_path, str(e)))
+
+
+def convert_only_personal_c_lines():
+    """Convert ONLY personal C-lines to OSCam/NCam reader format"""
+    print("DEBUG: Converting ONLY personal C-lines to OSCam/NCam format...")
+
+    if not exists(CCCAM_PERSONAL):
+        print("DEBUG: No personal CCCam lines found to convert")
+        return
+
+    # Read personal C-lines
+    with open(CCCAM_PERSONAL, 'r') as f:
+        cccam_content = f.read()
+
+    # Convert ONLY personal C-lines to OSCam format
+    oscam_servers = []
+    lines = cccam_content.split('\n')
+
+    for line in lines:
+        line = line.strip()
+        # Convert ONLY personal C-lines
+        if line.startswith('C: ') and not line.startswith('#'):
+            # Parse C-line and convert to OSCam reader
+            parts = line.split()
+            if len(parts) >= 5:
+                hostname = parts[1]
+                port = parts[2]
+                username = parts[3]
+                password = parts[4]
+
+                oscam_server = """[reader]
+label = %s_%s_personal
+protocol = cccam
+device = %s,%s
+user = %s
+password = %s
+group = 2
+ccckeepalive = 1
+inactivitytimeout = 30
+reconnecttimeout = 5
+disablecrccws = 1
+disablecrccws_only_for = 0E00:000000,0500:030B00,050F00;098C:000000;09C4:000000
+audisabled = 0
+""" % (hostname, port, hostname, port, username, password)
+                oscam_servers.append(oscam_server)
+
+    # Append personal servers to OSCam/NCam files
+    if oscam_servers:
+        # OSCam files
+        oscam_paths = findOscam()
+        for oscam_path in oscam_paths:
+            oscam_path = oscam_path.strip()
+            if exists(oscam_path):
+                append_personal_servers(oscam_path, oscam_servers)
+
+        # NCam files
+        ncam_paths = [
+            '/etc/tuxbox/config/ncam.server',
+            '/etc/tuxbox/config/ncam/ncam.server'
+        ]
+        for ncam_path in ncam_paths:
+            if exists(ncam_path):
+                append_personal_servers(ncam_path, oscam_servers)
+
+        print("DEBUG: Successfully converted personal C-lines to OSCam/NCam")
+    else:
+        print("DEBUG: No personal C-lines to convert")
+
+
+def append_personal_servers(file_path, servers):
+    """APPEND personal servers to config file"""
+    try:
+        # Read existing content
+        existing_content = ""
+        if exists(file_path):
+            with open(file_path, 'r') as f:
+                existing_content = f.read()
+
+        # Remove old personal sections to avoid duplicates
+        lines = existing_content.split('\n')
+        filtered_lines = []
+        skip_personal = False
+
+        for line in lines:
+            if '# Personal Converted CCcam servers' in line:
+                skip_personal = True
+                continue
+            elif skip_personal and line.strip() and not line.startswith('['):
+                continue
+            elif skip_personal and line.startswith('['):
+                skip_personal = False
+                filtered_lines.append(line)
+            elif not skip_personal:
+                filtered_lines.append(line)
+
+        # Rebuild base content (preserves FCA.sh free servers)
+        base_content = '\n'.join(filtered_lines).strip()
+
+        # APPEND new personal servers
+        new_content = base_content
+        if new_content:
+            new_content += '\n\n'
+
+        new_content += '# Personal Converted CCcam servers\n'
+        for server in servers:
+            new_content += server + '\n'
+
+        # Write file (free servers from FCA.sh + personal servers from plugin)
         with open(file_path, 'w') as f:
             f.write(new_content)
 
