@@ -53,7 +53,6 @@ def save_personal_lines_from_files():
 
     files_copied = []
 
-    # Cerca e copia file di linee personali da /tmp/ e /etc/personal_lines/
     personal_files = [
         ('/tmp/cccamx.txt', CCCAM_PERSONAL),
         ('/tmp/oscamx.txt', OSCAM_PERSONAL),
@@ -143,14 +142,14 @@ def add_personal_lines_to_cccam_only():
 
 
 def convert_personal_lines_if_needed():
-    """Convert personal lines to OSCam/NCam and append to files"""
+    """Convert personal lines to OSCam/NCam and append to files - CLEAN FIRST"""
     print("DEBUG: Converting and appending personal lines to OSCam/NCam...")
 
     if not exists(CCCAM_PERSONAL):
         print("DEBUG: No personal lines to convert")
         return
 
-    # Leggi le personali attuali
+    # Read current personal lines
     with open(CCCAM_PERSONAL, 'r') as f:
         current_personals = f.read().strip()
 
@@ -158,9 +157,91 @@ def convert_personal_lines_if_needed():
         print("DEBUG: Personal lines file is empty")
         return
 
-    # Converti SEMPRE le personali e aggiungile alla fine
+    # 1. CLEAN OSCam/NCam files first (remove duplicate free servers)
+    clean_oscam_ncam_files()
+
+    # 2. Convert personal lines and append them
     print("DEBUG: Converting personal lines to reader format...")
     convert_only_personal_c_lines()
+
+
+def clean_oscam_ncam_files():
+    """Clean OSCam/NCam files by removing duplicate free servers"""
+    print("DEBUG: Cleaning OSCam/NCam files...")
+
+    # Paths to clean
+    paths_to_clean = [
+        '/etc/tuxbox/config/oscam/oscam.server',
+        '/etc/tuxbox/config/oscam-emu/oscam.server',
+        '/etc/tuxbox/config/oscam_atv_free/oscam.server',
+        '/etc/tuxbox/config/oscam.server',
+        '/etc/tuxbox/config/oscam-stable/oscam.server',
+        '/var/tuxbox/config/oscam.server',
+        '/etc/tuxbox/config/gcam.server',
+        '/etc/tuxbox/config/ncam.server',
+        '/etc/tuxbox/config/ncam/ncam.server',
+        '/etc/tuxbox/config/supcam-emu/oscam.server',
+        '/etc/tuxbox/config/oscamicam/oscam.server',
+        '/etc/tuxbox/config/oscamicamnew/oscam.server'
+    ]
+
+    for file_path in paths_to_clean:
+        if exists(file_path):
+            try:
+                with open(file_path, 'r') as f:
+                    content = f.read()
+
+                # Remove ALL free readers (those without "_personal")
+                lines = content.split('\n')
+                cleaned_lines = []
+                current_reader = []
+                in_reader = False
+                is_personal = False
+
+                for line in lines:
+                    if line.strip().startswith('[reader]'):
+                        # New reader started
+                        if current_reader and is_personal:
+                            # If it was a personal reader, keep it
+                            cleaned_lines.extend(current_reader)
+                        current_reader = [line]
+                        in_reader = True
+                        is_personal = False
+                    elif in_reader and line.strip().startswith('label =') and '_personal' in line:
+                        # It's a personal reader
+                        is_personal = True
+                        current_reader.append(line)
+                    elif in_reader and line.strip() and not line.strip().startswith('['):
+                        # Continue current reader
+                        current_reader.append(line)
+                    elif in_reader and (not line.strip() or line.strip().startswith('[')):
+                        # End of the reader
+                        if current_reader and is_personal:
+                            cleaned_lines.extend(current_reader)
+                            cleaned_lines.append('')  # Empty line
+                        current_reader = []
+                        in_reader = False
+                        is_personal = False
+                        if line.strip():
+                            cleaned_lines.append(line)
+                    elif not in_reader:
+                        cleaned_lines.append(line)
+
+                # Add the last reader if personal
+                if current_reader and is_personal:
+                    cleaned_lines.extend(current_reader)
+
+                # Rebuild the content
+                cleaned_content = '\n'.join(cleaned_lines).strip()
+
+                # Write the cleaned file
+                with open(file_path, 'w') as f:
+                    f.write(cleaned_content + '\n')
+
+                print("DEBUG: Cleaned %s" % file_path)
+
+            except Exception as e:
+                print("DEBUG: Error cleaning %s: %s" % (file_path, str(e)))
 
 
 def save_personal_cccam_line():  # not used
@@ -308,7 +389,7 @@ def append_personal_servers(file_path, servers):
             with open(file_path, 'r') as f:
                 existing_content = f.read()
 
-        # Rimuovi VECCHIE sezioni personali per evitare duplicati
+        # Remove OLD personal sections to avoid duplicates
         lines = existing_content.split('\n')
         filtered_lines = []
         skip_personal = False
@@ -321,15 +402,15 @@ def append_personal_servers(file_path, servers):
                 continue
             elif skip_personal and (line.startswith('[') or not line.strip()):
                 skip_personal = False
-                if line.strip():  # Aggiungi solo se non è vuota
+                if line.strip():  # Add only if not empty
                     filtered_lines.append(line)
             elif not skip_personal:
                 filtered_lines.append(line)
 
-        # Ricostruisci il contenuto base
+        # Rebuild base content
         base_content = '\n'.join(filtered_lines).strip()
 
-        # AGGIUNGI SEMPRE i server personali alla fine
+        # ALWAYS append personal servers at the end
         new_content = base_content
         if new_content:
             new_content += '\n\n'
@@ -338,7 +419,7 @@ def append_personal_servers(file_path, servers):
         for server in servers:
             new_content += server + '\n'
 
-        # Scrivi il file
+        # Write the file
         with open(file_path, 'w') as f:
             f.write(new_content)
 
@@ -827,10 +908,10 @@ class MainMenus(Screen):
                 with open(oscam_path, 'w') as f:
                     f.write(final_content.strip() + "\n")
 
-        # 1. AGGIUNGI personali a CCcam.cfg (sempre)
+        # 1. ADD personal lines to CCcam.cfg (always)
         add_personal_lines_to_cccam_only()
 
-        # 2. CONVERTI personali in OSCam/NCam (SEMPRE)
+        # 2. CONVERT personal lines to OSCam/NCam (ALWAYS)
         convert_personal_lines_if_needed()
 
         print("DEBUG: EXECUTION FINISHED")
