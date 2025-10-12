@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 __author__ = "Lululla"
 __email__ = "ekekaz@gmail.com"
-__copyright__ = 'Copyright (c) 2024 Lululla'
 __license__ = "GPL-v2"
 __version__ = "1.0.0"
 
