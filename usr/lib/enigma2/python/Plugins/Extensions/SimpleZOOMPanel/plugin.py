@@ -142,7 +142,7 @@ def add_personal_lines_to_cccam_only():
 
 
 def convert_personal_lines_if_needed():
-    """Convert personal lines to OSCam/NCam and append to files - CLEAN FIRST"""
+    """Convert personal lines to OSCam/NCam and append to files - NO CLEANING"""
     print("DEBUG: Converting and appending personal lines to OSCam/NCam...")
 
     if not exists(CCCAM_PERSONAL):
@@ -157,8 +157,7 @@ def convert_personal_lines_if_needed():
         print("DEBUG: Personal lines file is empty")
         return
 
-    # 1. CLEAN OSCam/NCam files first (remove duplicate free servers)
-    clean_oscam_ncam_files()
+    # clean_oscam_ncam_files()
 
     # 2. Convert personal lines and append them
     print("DEBUG: Converting personal lines to reader format...")
@@ -244,52 +243,6 @@ def clean_oscam_ncam_files():
                 print("DEBUG: Error cleaning %s: %s" % (file_path, str(e)))
 
 
-def save_personal_cccam_line():  # not used
-    """Save the personal CCCam line from the CCcam.cfg file"""
-    ensure_personal_lines_dir()
-    cccam_paths = findCccam()
-
-    personal_lines_found = False
-
-    for cccam_path in cccam_paths:
-        cccam_path = cccam_path.strip()
-        if exists(cccam_path):
-            print("DEBUG: Reading CCCam file: %s" % cccam_path)
-            with open(cccam_path, 'r') as f:
-                content = f.read()
-
-            # Manually search for personal lines (without extract_personal_cccam_lines)
-            lines = content.split('\n')
-            personal_lines = []
-
-            for line in lines:
-                line = line.strip()
-                # Keep only C: lines that are not comments and do not contain free server keywords
-                if (line.startswith('C: ') and
-                        not line.startswith('#') and
-                        'free' not in line.lower() and
-                        'test' not in line.lower() and
-                        'server' not in line.lower()):
-                    personal_lines.append(line)
-
-            if personal_lines:
-                with open(CCCAM_PERSONAL, 'w') as f:
-                    f.write('\n'.join(personal_lines))
-                print("DEBUG: Personal CCCam lines saved to: %s" % CCCAM_PERSONAL)
-                print("DEBUG: Found %s personal CCCam lines" % len(personal_lines))
-                personal_lines_found = True
-                break  # Take only from the first valid file
-            else:
-                print("DEBUG: No personal CCCam lines found in: %s" % cccam_path)
-
-    # If no personal lines are found but the file already exists, keep it
-    if not personal_lines_found and exists(CCCAM_PERSONAL):
-        print("DEBUG: Keeping existing personal CCCam file")
-        return True
-
-    return personal_lines_found
-
-
 def add_personal_lines_to_configs():
     """Add personal lines to configuration files - NO conversion"""
     ensure_personal_lines_dir()
@@ -302,7 +255,7 @@ def add_personal_lines_to_configs():
 
 
 def convert_only_personal_c_lines():
-    """Convert ONLY personal C-lines to OSCam/NCam reader format"""
+    """Convert ONLY personal C-lines to OSCam/NCam reader format - FIXED FOR ALL CAMS"""
     print("DEBUG: ===== CONVERT PERSONAL LINES START =====")
     print("DEBUG: CCCAM_PERSONAL exists:", exists(CCCAM_PERSONAL))
 
@@ -357,25 +310,28 @@ audisabled = 0
 
     print("DEBUG: Servers created:", len(oscam_servers))
 
-    # Append personal servers to OSCam/NCam files
+    # Append personal servers to ALL CAM files
     if oscam_servers:
-        # OSCam files
-        oscam_paths = findOscam()
-        for oscam_path in oscam_paths:
-            oscam_path = oscam_path.strip()
-            if exists(oscam_path):
-                append_personal_servers(oscam_path, oscam_servers)
-
-        # NCam files
-        ncam_paths = [
+        all_cam_files = [
+            '/etc/tuxbox/config/oscam/oscam.server',
+            '/etc/tuxbox/config/oscam-emu/oscam.server',
+            '/etc/tuxbox/config/oscam_atv_free/oscam.server',
+            '/etc/tuxbox/config/oscam.server',
+            '/etc/tuxbox/config/oscam-stable/oscam.server',
+            '/var/tuxbox/config/oscam.server',
+            '/etc/tuxbox/config/gcam.server',
             '/etc/tuxbox/config/ncam.server',
-            '/etc/tuxbox/config/ncam/ncam.server'
+            '/etc/tuxbox/config/ncam/ncam.server',
+            '/etc/tuxbox/config/supcam-emu/oscam.server',
+            '/etc/tuxbox/config/oscamicam/oscam.server',
+            '/etc/tuxbox/config/oscamicamnew/oscam.server'
         ]
-        for ncam_path in ncam_paths:
-            if exists(ncam_path):
-                append_personal_servers(ncam_path, oscam_servers)
 
-        print("DEBUG: Successfully converted personal C-lines to OSCam/NCam")
+        for cam_file in all_cam_files:
+            if exists(cam_file):
+                append_personal_servers(cam_file, oscam_servers)
+
+        print("DEBUG: Successfully converted personal C-lines to ALL CAM files")
     else:
         print("DEBUG: No personal C-lines to convert")
 
@@ -427,28 +383,6 @@ def append_personal_servers(file_path, servers):
 
     except Exception as e:
         print("DEBUG: Error writing to %s: %s" % (file_path, str(e)))
-
-
-def confirmSavePersonalLines(self, confirmed):
-    if confirmed:
-        success = save_personal_lines_from_files()
-
-        if success:
-            message = "Personal lines saved successfully!\n\n"
-            if exists(CCCAM_PERSONAL):
-                with open(CCCAM_PERSONAL, 'r') as f:
-                    content = f.read().strip()
-                if content:
-                    message += "CCCam lines: ✓ (%s lines)\n" % len(content.split('\n'))
-            if exists(OSCAM_PERSONAL):
-                message += "OSCam config: ✓\n"
-            if exists(NCAM_PERSONAL):
-                message += "NCam config: ✓\n"
-            message += "\nThese lines will be automatically added after each update."
-        else:
-            message = "No personal line files found!\n\nPlease create one of these files:\n- /tmp/cccamx.txt\n- /etc/personal_lines/cccamx.txt\n\nwith your personal C-lines and try again."
-
-        self.session.open(MessageBox, message, MessageBox.TYPE_INFO, timeout=10)
 
 
 def findCccam():
@@ -908,13 +842,43 @@ class MainMenus(Screen):
                 with open(oscam_path, 'w') as f:
                     f.write(final_content.strip() + "\n")
 
-        # 1. ADD personal lines to CCcam.cfg (always)
         add_personal_lines_to_cccam_only()
-
-        # 2. CONVERT personal lines to OSCam/NCam (ALWAYS)
+        
         convert_personal_lines_if_needed()
-
+        
         print("DEBUG: EXECUTION FINISHED")
+
+    def append_personal_servers(file_path, servers):
+        """Append personal servers to ANY cam file"""
+        try:
+            # Read existing content
+            existing_content = ""
+            if exists(file_path):
+                with open(file_path, 'r') as f:
+                    existing_content = f.read()
+
+            # Check if personal servers already exist
+            if '# Personal Converted CCcam servers' in existing_content:
+                print("DEBUG: Personal servers already present in %s - SKIPPING" % file_path)
+                return
+
+            # Append personal servers at the end of the file
+            new_content = existing_content.strip()
+            if new_content:
+                new_content += '\n\n'
+
+            new_content += '# Personal Converted CCcam servers\n'
+            for server in servers:
+                new_content += server + '\n'
+
+            # Write updated file
+            with open(file_path, 'w') as f:
+                f.write(new_content)
+
+            print("DEBUG: Personal servers added to %s" % file_path)
+
+        except Exception as e:
+            print("DEBUG: Error writing to %s: %s" % (file_path, str(e)))
 
     # Run the script FCA in the background
     def runScriptInBackground(self):
