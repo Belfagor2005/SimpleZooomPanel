@@ -3,6 +3,27 @@
 [ -d /tmp/xtest ] || mkdir -p /tmp/xtest
 cd /tmp/xtest
 
+# Check if curl is installed
+cat > /tmp/install_curl.sh << 'EOF'
+#!/bin/sh
+cd /tmp
+mkdir -p xtest
+cd xtest
+if ! command -v curl >/dev/null 2>&1; then
+    if command -v opkg >/dev/null 2>&1; then
+        opkg update
+        opkg install curl
+    elif command -v apt-get >/dev/null 2>&1; then
+        apt-get update
+        apt-get install -y curl
+    fi
+fi
+command -v curl && echo "SUCCESS" || echo "FAILED"
+EOF
+sh /tmp/install_curl.sh
+
+
+
 echo "Downloading CCcam lines..."
 
 ####################################################################################################
