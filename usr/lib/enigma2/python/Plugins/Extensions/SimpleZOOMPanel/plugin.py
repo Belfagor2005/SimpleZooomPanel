@@ -26,7 +26,7 @@ if PY3:
 else:
     from urllib2 import urlopen
 
-version : '2.3.0'
+version = '2.3.0'
 script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
 
 # Files for personal lines
