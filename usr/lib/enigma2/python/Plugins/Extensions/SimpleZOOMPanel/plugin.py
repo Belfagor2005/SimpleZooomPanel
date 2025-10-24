@@ -26,7 +26,7 @@ if PY3:
 else:
     from urllib2 import urlopen
 
-
+version : '2.3.0'
 script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
 
 # Files for personal lines
@@ -491,7 +491,7 @@ def ensure_directory_exists(file_path):
 class MainMenus(Screen):
     # Defining the skin (UI layout) of the MainMenus
     skin = """
-            <screen name="MainMenus" position="648,363" size="750,350" title="Centrum">
+            <screen name="MainMenus" position="center,center" size="750,350" title="Centrum">
                 <!-- Cron -->
                 <widget name="lab2" position="1,290" size="380,40" font="Regular; 30" halign="right" valign="center" backgroundColor="background" transparent="1" />
                 <widget name="labstop" position="435,290" size="250,40" font="Regular;32" halign="center" valign="center" foregroundColor="white" backgroundColor="red" zPosition="1" />
@@ -510,7 +510,7 @@ class MainMenus(Screen):
                 <widget name="desc5" position="608,195" size="130,30" font="Regular;20" halign="center" />
                 <!-- Detail -->
                 <widget name="detail" position="10,228" size="732,53" font="Regular; 28" halign="left" valign="center" />
-                <eLabel name="" position="7,3" size="350,44" text="Simple ZOOM Panel 2.2.7" font="Regular; 26" foregroundColor="#707070" />
+                <eLabel name="" position="7,3" size="350,44" text="Simple ZOOM Panel 2.3.0" font="Regular; 26" foregroundColor="#707070" />
                 <eLabel name="" position="445,1" size="66,26" text="created :" font="Regular; 15" foregroundColor="green" />
                 <eLabel name="" position="517,2" size="81,23" text="E2W!zard" font="Regular; 16" />
                 <eLabel name="" position="518,24" size="73,25" font="Regular; 16" text="HIUMAN" />
@@ -555,7 +555,7 @@ class MainMenus(Screen):
         self["detail"] = Label("Select an option to view details")
 
         # Additional detail labels for each icon
-        self["detail1"] = Label("A suite of utility tools.")
+        self["detail1"] = Label("A suite of utility tools. Version %s" % version)
         self["detail2"] = Label("Additional features and enhancements.")
         self["detail3"] = Label("Customize plugin to your preference.")
         self["detail4"] = Label("Install CronTimer. Use Plugin Image")
