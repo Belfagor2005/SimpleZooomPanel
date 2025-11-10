@@ -976,11 +976,10 @@ class MainMenus(Screen):
             self.runScriptInBackground()
 
     def runScriptWithConsole(self):  # fixed lululla
-
         if exists(SCRIPT_PATH):
             chmod(SCRIPT_PATH, 0o777)
             self.session.open(Console,
-                              title="Executing Free Cline Access Script",
+                              _("Executing Free Cline Access Script"),
                               cmdlist=[SCRIPT_PATH],
                               finishedCallback=self.scriptFinished)
 
