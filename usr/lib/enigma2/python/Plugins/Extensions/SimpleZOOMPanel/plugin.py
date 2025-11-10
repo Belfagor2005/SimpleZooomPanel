@@ -1,23 +1,33 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-from . import _
-
-from Components.ActionMap import ActionMap
-from Components.Label import Label
-from Components.MenuList import MenuList
-from Components.Pixmap import Pixmap
-from Plugins.Plugin import PluginDescriptor
-from Screens.Console import Console
-from Screens.MessageBox import MessageBox
-from Screens.Screen import Screen
-from os import mkdir, chmod, rename, popen
-from os.path import exists, dirname
-from six.moves import range
+# Standard library
 import subprocess
 import sys
 import threading
 import zipfile
+from os import mkdir, chmod, rename, popen
+from os.path import exists, dirname, abspath, join
+from six.moves import range
+from time import sleep
+
+# Enigma2 / Components
+from Components.ActionMap import ActionMap
+from Components.Label import Label
+from Components.MenuList import MenuList
+from Components.Pixmap import Pixmap
+from Components.Console import Console
+
+# Screens
+from Screens.MessageBox import MessageBox
+from Screens.Screen import Screen
+
+# Plugins
+from Plugins.Plugin import PluginDescriptor
+
+# Relative imports
+from . import _
+
 
 PY3 = sys.version_info.major >= 3
 
@@ -26,14 +36,17 @@ if PY3:
 else:
     from urllib2 import urlopen
 
-version = '2.3.0'
-script_path = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh"
+version = '2.3.1'
 
-# Files for personal lines
-PERSONAL_LINES_DIR = "/etc/personal_lines/"
-CCCAM_PERSONAL = PERSONAL_LINES_DIR + "cccamx"
-OSCAM_PERSONAL = PERSONAL_LINES_DIR + "oscamx"
-NCAM_PERSONAL = PERSONAL_LINES_DIR + "ncamx"
+BASE_PATH = dirname(abspath(__file__))
+
+SCRIPT_PATH = join(BASE_PATH, "Centrum", "Tools", "FCA.sh")
+
+PERSONAL_LINES_DIR = join(BASE_PATH, "personal_lines")
+
+CCCAM_PERSONAL = join(PERSONAL_LINES_DIR, "cccamx")
+OSCAM_PERSONAL = join(PERSONAL_LINES_DIR, "oscamx")
+NCAM_PERSONAL = join(PERSONAL_LINES_DIR, "ncamx")
 
 
 # recoded from lululla
@@ -675,7 +688,7 @@ class MainMenus(Screen):
             print("DEBUG: process cron stopped")
 
     def crondStart(self):
-        from Components.Console import Console
+        """Start the crond service"""
         self.Console = Console()
         if not self.my_crond_run:
             print("DEBUG: Starting crond...")
@@ -686,8 +699,17 @@ class MainMenus(Screen):
             self.Console.ePopen("killall crond", self.startStopCallback)
             self.session.open(MessageBox, "Please wait, stopping crontimer!", MessageBox.TYPE_INFO, timeout=5)
 
+    def crondStop(self):
+        """Stop the crond service"""
+        self.Console = Console()
+        if self.my_crond_run:
+            print("DEBUG: Stopping crond...")
+            self.Console.ePopen("killall crond", self.startStopCallback)
+            self.session.open(MessageBox, "Please wait, stopping crontimer!", MessageBox.TYPE_INFO, timeout=5)
+        else:
+            self.session.open(MessageBox, "CronTimer is already stopped!", MessageBox.TYPE_INFO, timeout=5)
+
     def startStopCallback(self, result=None, retval=None, extra_args=None):
-        from time import sleep
         print("DEBUG: Callback triggered -> result=%s, retval=%s, extra_args=%s" % (result, retval, extra_args))
         sleep(3)
         self.on_init_cron()
@@ -698,6 +720,16 @@ class MainMenus(Screen):
             destination = "/etc/cron/crontabs/root"
             command = "mkdir -p /etc/cron/crontabs;cp %s %s && chmod +x %s" % (source, destination, destination)
             self.session.open(Console, _("Installing cron job script..."), [command])
+
+    # simply the update
+    def update(self):
+        # First add your personal lines if they exist
+        add_personal_lines_to_configs()
+
+        self.session.open(Console, _("Updating package..."), [
+            # "wget -O /tmp/package.ipk 'https://drive.google.com/uc?export=download&id=1c01xd-idAwPc6rDO8TqGijXG8niJ52Sv' > /dev/null 2>&1 && opkg install /tmp/package.ipk"
+            'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh'
+        ])
 
     def updateSelection(self):
         descriptions = ["Tools", "Extras", "Settings", "CronTimer", "Help"]
@@ -713,46 +745,6 @@ class MainMenus(Screen):
 
                 self["desc%s" % i].setText(descriptions[i - 1])
 
-    # Handle Left key press # fixed lululla
-    def keyLeft(self):
-        # self.selectedIcon = 5 if self.selectedIcon == 1 else self.selectedIcon - 1
-        self.selectedIcon = 5 if self.selectedIcon == 1 else self.selectedIcon - 1
-        self.updateSelection()
-
-    # Handle Right key press # fixed lululla
-    def keyRight(self):
-        # self.selectedIcon = 1 if self.selectedIcon == 5 else self.selectedIcon + 1
-        self.selectedIcon = (self.selectedIcon % 5) + 1
-        self.updateSelection()
-
-    # Handle Red button press
-    def redPressed(self):
-        self.selectedIcon = 1
-        self.updateSelection()
-        self.okClicked()
-
-    # Handle Green button press
-    def greenPressed(self):
-        self.selectedIcon = 2
-        self.updateSelection()
-        self.okClicked()
-
-    # Handle Green button press
-    def yellowPressed(self):
-        self.selectedIcon = 3
-        self.updateSelection()
-        self.okClicked()
-
-    # Handle Blue button press
-    def bluePressed(self):
-        self.selectedIcon = 5
-        self.updateSelection()
-        self.okClicked()
-
-    # Prompt the user to confirm whether they want to update the script
-    def askForUpdateFca(self):
-        self.session.openWithCallback(self.UpdateFca, MessageBox, "Do you want to see the process?", MessageBox.TYPE_YESNO)
-
     # Handles the confirmation for installing FCA Script from Lululla git # fixed lululla
     def UpdateFca(self, confirmed):
         if confirmed:
@@ -760,69 +752,8 @@ class MainMenus(Screen):
             add_personal_lines_to_configs()
 
             # Then update the script
-            command = "wget -O %s 'https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/refs/heads/main/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh' && chmod +x %s" % (script_path, script_path)
+            command = "wget -O %s 'https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/refs/heads/main/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh' && chmod +x %s" % (SCRIPT_PATH, SCRIPT_PATH)
             self.session.open(Console, _("Update FCA Script From Git..."), [command])
-
-    # Prompt user to confirm whether they want to see the process (or background) for Free Cline Access # fixed lululla
-    def askForUserPreference(self):
-        self.session.openWithCallback(self.runScriptWithPreference, MessageBox, "Do you want to see the process?", MessageBox.TYPE_YESNO)
-
-    # recoded from lululla # fixed lululla
-    def runScriptWithPreference(self, confirmed):
-        # First add personal lines if they exist
-        add_personal_lines_to_configs()
-
-        # Find configuration files
-        print("DEBUG: Find CCcam file...")
-        cccam_paths = findCccam()
-        print("DEBUG: cccam_paths = %s" % cccam_paths)
-        print("DEBUG: Find Oscam file...")
-        oscam_paths = findOscam()
-        print("DEBUG: oscam_paths = %s" % oscam_paths)
-
-        # Step 1: Save backup before running script
-        self.cccam_original_content = {}
-        for cccam_path in set(cccam_paths):
-            cccam_path = cccam_path.strip()
-            if cccam_path:
-                backup = prependToFile(cccam_path)
-                self.cccam_original_content[cccam_path] = backup
-                print("DEBUG: Backup for %s" % cccam_path)
-
-        self.oscam_original_content = {}
-        for oscam_path in set(oscam_paths):
-            oscam_path = oscam_path.strip()
-            if oscam_path:
-                backup = prependToFile(oscam_path)
-                self.oscam_original_content[oscam_path] = backup
-                print("DEBUG: Backup for %s" % oscam_path)
-
-        # Step 2: Execute script
-        if confirmed:
-            print("DEBUG: Execute script in console...")
-            self.runScriptWithConsole()
-        else:
-            print("DEBUG: Execute script in background...")
-            self.runScriptInBackground()
-
-    def runScriptWithConsole(self):  # fixed lululla
-
-        if exists(script_path):
-            chmod(script_path, 0o777)
-            self.session.open(Console,
-                              title="Executing Free Cline Access Script",
-                              cmdlist=[script_path],
-                              finishedCallback=self.scriptFinished)
-
-        else:
-            self.session.open(MessageBox,
-                              "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh",
-                              MessageBox.TYPE_ERROR,
-                              timeout=10)
-
-    def scriptFinished(self, result=None):  # fixed lululla
-        print("DEBUG: Script finished, proceeding with file updates.")
-        self.updateFilesWithBackup()
 
     def updateFilesWithBackup(self):
         for cccam_path, backup in self.cccam_original_content.items():
@@ -843,9 +774,9 @@ class MainMenus(Screen):
                     f.write(final_content.strip() + "\n")
 
         add_personal_lines_to_cccam_only()
-        
+
         convert_personal_lines_if_needed()
-        
+
         print("DEBUG: EXECUTION FINISHED")
 
     def append_personal_servers(file_path, servers):
@@ -879,37 +810,6 @@ class MainMenus(Screen):
 
         except Exception as e:
             print("DEBUG: Error writing to %s: %s" % (file_path, str(e)))
-
-    # Run the script FCA in the background
-    def runScriptInBackground(self):
-        if self.script_running.is_set():
-            self.session.open(MessageBox, "Please wait, the process is still running!", MessageBox.TYPE_INFO, timeout=5)
-            return
-        self.script_running.set()
-
-        chmod(script_path, 0o777)
-        threading.Thread(target=self.executeScript, args=(script_path,)).start()
-        self.session.open(MessageBox, "Process has started. Please wait for completion!", MessageBox.TYPE_INFO, timeout=10)
-
-    # Executes a script located at script_path
-    def executeScript(self, script_path):
-        try:
-            # Run the script with shell access and capture the output
-            result = subprocess.run(script_path, shell=True, capture_output=True, text=True)
-            # Check if the script execution was successful
-            if result.returncode != 0:
-                self.session.open(MessageBox, "Error running script:\n" + result.stderr, MessageBox.TYPE_ERROR, timeout=15)
-            else:
-                # Split the output into pages to display
-                PAGE_SIZE = 1000
-                output_pages = [result.stdout[i:i + PAGE_SIZE] for i in range(0, len(result.stdout), PAGE_SIZE)]
-                self.showOutputPages(output_pages, 0)
-        except Exception as e:
-            # Handle any exceptions and show an error message
-            self.session.open(MessageBox, "Exception running script:" + str(e), MessageBox.TYPE_ERROR, timeout=15)
-        finally:
-            # Ensure the script_running flag is cleared after execution
-            self.script_running.clear()
 
     # Dummy function to indicate unimplemented options
     def dummy(self):
@@ -1022,6 +922,74 @@ class MainMenus(Screen):
                 # Handle errors during the addition process
                 self.session.open(MessageBox, "Error installing CCCAM.CFG/OSCAM.CFG/CCCAMDATAX/OSCAMDATAX: " + str(e), MessageBox.TYPE_ERROR, timeout=15)
 
+    def scriptFinished(self, result=None):  # fixed lululla
+        print("DEBUG: Script finished, proceeding with file updates.")
+        self.updateFilesWithBackup()
+
+    # Run the script FCA in the background
+    def runScriptInBackground(self):
+        if self.script_running.is_set():
+            self.session.open(MessageBox, "Please wait, the process is still running!", MessageBox.TYPE_INFO, timeout=5)
+            return
+        self.script_running.set()
+
+        chmod(SCRIPT_PATH, 0o777)
+        threading.Thread(target=self.executeScript, args=(SCRIPT_PATH,)).start()
+        self.session.open(MessageBox, "Process has started. Please wait for completion!", MessageBox.TYPE_INFO, timeout=10)
+
+    # recoded from lululla # fixed lululla
+    def runScriptWithPreference(self, confirmed):
+        # First add personal lines if they exist
+        add_personal_lines_to_configs()
+
+        # Find configuration files
+        print("DEBUG: Find CCcam file...")
+        cccam_paths = findCccam()
+        print("DEBUG: cccam_paths = %s" % cccam_paths)
+        print("DEBUG: Find Oscam file...")
+        oscam_paths = findOscam()
+        print("DEBUG: oscam_paths = %s" % oscam_paths)
+
+        # Step 1: Save backup before running script
+        self.cccam_original_content = {}
+        for cccam_path in set(cccam_paths):
+            cccam_path = cccam_path.strip()
+            if cccam_path:
+                backup = prependToFile(cccam_path)
+                self.cccam_original_content[cccam_path] = backup
+                print("DEBUG: Backup for %s" % cccam_path)
+
+        self.oscam_original_content = {}
+        for oscam_path in set(oscam_paths):
+            oscam_path = oscam_path.strip()
+            if oscam_path:
+                backup = prependToFile(oscam_path)
+                self.oscam_original_content[oscam_path] = backup
+                print("DEBUG: Backup for %s" % oscam_path)
+
+        # Step 2: Execute script
+        if confirmed:
+            print("DEBUG: Execute script in console...")
+            self.runScriptWithConsole()
+        else:
+            print("DEBUG: Execute script in background...")
+            self.runScriptInBackground()
+
+    def runScriptWithConsole(self):  # fixed lululla
+
+        if exists(SCRIPT_PATH):
+            chmod(SCRIPT_PATH, 0o777)
+            self.session.open(Console,
+                              title="Executing Free Cline Access Script",
+                              cmdlist=[SCRIPT_PATH],
+                              finishedCallback=self.scriptFinished)
+
+        else:
+            self.session.open(MessageBox,
+                              "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh",
+                              MessageBox.TYPE_ERROR,
+                              timeout=10)
+
     # Installs AJPanel
     def runAJPanel(self):
         self.session.open(Console, _("Installing AJPanel..."), [
@@ -1052,15 +1020,68 @@ class MainMenus(Screen):
             "/bin/sh -c 'opkg install https://github.com/skyjet18/enigma2-plugin-extensions-csfd/releases/download/v18.00/enigma2-plugin-extensions-csfd_18.00-20230919_all.ipk'"
         ])
 
-    # simply the update
-    def update(self):
-        # First add your personal lines if they exist
-        add_personal_lines_to_configs()
+    # Runs a given command and handles success or failure
+    def runCommand(self, command, success_msg, error_msg):
+        if self.script_running.is_set():
+            self.session.open(MessageBox, "Please wait, the process is still running!", MessageBox.TYPE_INFO, timeout=15)
+            return
+        self.script_running.set()
+        threading.Thread(target=self.executeCommand, args=(command, success_msg, error_msg)).start()
+        self.session.open(MessageBox, "Process has started. Please wait for completion.", MessageBox.TYPE_INFO, timeout=10)
 
-        self.session.open(Console, _("Updating package..."), [
-            # "wget -O /tmp/package.ipk 'https://drive.google.com/uc?export=download&id=1c01xd-idAwPc6rDO8TqGijXG8niJ52Sv' > /dev/null 2>&1 && opkg install /tmp/package.ipk"
-            'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh'
-        ])
+    # Executes a given command and shows appropriate messages based on the result
+    def executeCommand(self, command, success_msg, error_msg):
+        try:
+            # Run the command with shell access and capture the output
+            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+
+            # Check if the command execution was successful
+            if result.returncode != 0:
+                self.session.open(MessageBox, error_msg + ":\n" + result.stderr, MessageBox.TYPE_ERROR, timeout=15)
+            else:
+                # Split the output into pages to display
+                PAGE_SIZE = 1000
+                output_pages = [result.stdout[i:i + PAGE_SIZE] for i in range(0, len(result.stdout), PAGE_SIZE)]
+                self.showOutputPages(output_pages, 0)
+                self.session.open(MessageBox, success_msg, MessageBox.TYPE_INFO, timeout=5)
+        except Exception as e:
+            # Handle any exceptions and show an error message
+            self.session.open(MessageBox, "Exception running command:" + str(e), MessageBox.TYPE_ERROR, timeout=15)
+        finally:
+            # Ensure the script_running flag is cleared after execution
+            self.script_running.clear()
+
+    # Executes a script located at script_path
+    def executeScript(self, script_path):
+        try:
+            # Run the script with shell access and capture the output
+            result = subprocess.run(script_path, shell=True, capture_output=True, text=True)
+            # Check if the script execution was successful
+            if result.returncode != 0:
+                self.session.open(MessageBox, "Error running script:\n" + result.stderr, MessageBox.TYPE_ERROR, timeout=15)
+            else:
+                # Split the output into pages to display
+                PAGE_SIZE = 1000
+                output_pages = [result.stdout[i:i + PAGE_SIZE] for i in range(0, len(result.stdout), PAGE_SIZE)]
+                self.showOutputPages(output_pages, 0)
+        except Exception as e:
+            # Handle any exceptions and show an error message
+            self.session.open(MessageBox, "Exception running script:" + str(e), MessageBox.TYPE_ERROR, timeout=15)
+        finally:
+            # Ensure the script_running flag is cleared after execution
+            self.script_running.clear()
+
+    # Executes command on a given input "yes"
+    def askForConfirmation(self, message, callback):
+        self.session.openWithCallback(callback, MessageBox, message, MessageBox.TYPE_YESNO)
+
+    # Prompt user to confirm whether they want to see the process (or background) for Free Cline Access # fixed lululla
+    def askForUserPreference(self):
+        self.session.openWithCallback(self.runScriptWithPreference, MessageBox, "Do you want to see the process?", MessageBox.TYPE_YESNO)
+
+    # Prompt the user to confirm whether they want to update the script
+    def askForUpdateFca(self):
+        self.session.openWithCallback(self.UpdateFca, MessageBox, "Do you want to see the process?", MessageBox.TYPE_YESNO)
 
     # Displays FAQ information in paginated format recoded from lululla
     def faq(self):
@@ -1192,40 +1213,41 @@ class MainMenus(Screen):
         )
         self.session.open(MessageBox, message, MessageBox.TYPE_INFO, timeout=30)
 
-    # Runs a given command and handles success or failure
-    def runCommand(self, command, success_msg, error_msg):
-        if self.script_running.is_set():
-            self.session.open(MessageBox, "Please wait, the process is still running!", MessageBox.TYPE_INFO, timeout=15)
-            return
-        self.script_running.set()
-        threading.Thread(target=self.executeCommand, args=(command, success_msg, error_msg)).start()
-        self.session.open(MessageBox, "Process has started. Please wait for completion.", MessageBox.TYPE_INFO, timeout=10)
+    # Handle Left key press # fixed lululla
+    def keyLeft(self):
+        # self.selectedIcon = 5 if self.selectedIcon == 1 else self.selectedIcon - 1
+        self.selectedIcon = 5 if self.selectedIcon == 1 else self.selectedIcon - 1
+        self.updateSelection()
 
-    # Executes command on a given input "yes"
-    def askForConfirmation(self, message, callback):
-        self.session.openWithCallback(callback, MessageBox, message, MessageBox.TYPE_YESNO)
+    # Handle Right key press # fixed lululla
+    def keyRight(self):
+        # self.selectedIcon = 1 if self.selectedIcon == 5 else self.selectedIcon + 1
+        self.selectedIcon = (self.selectedIcon % 5) + 1
+        self.updateSelection()
 
-    # Executes a given command and shows appropriate messages based on the result
-    def executeCommand(self, command, success_msg, error_msg):
-        try:
-            # Run the command with shell access and capture the output
-            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    # Handle Red button press
+    def redPressed(self):
+        self.selectedIcon = 1
+        self.updateSelection()
+        self.okClicked()
 
-            # Check if the command execution was successful
-            if result.returncode != 0:
-                self.session.open(MessageBox, error_msg + ":\n" + result.stderr, MessageBox.TYPE_ERROR, timeout=15)
-            else:
-                # Split the output into pages to display
-                PAGE_SIZE = 1000
-                output_pages = [result.stdout[i:i + PAGE_SIZE] for i in range(0, len(result.stdout), PAGE_SIZE)]
-                self.showOutputPages(output_pages, 0)
-                self.session.open(MessageBox, success_msg, MessageBox.TYPE_INFO, timeout=5)
-        except Exception as e:
-            # Handle any exceptions and show an error message
-            self.session.open(MessageBox, "Exception running command:" + str(e), MessageBox.TYPE_ERROR, timeout=15)
-        finally:
-            # Ensure the script_running flag is cleared after execution
-            self.script_running.clear()
+    # Handle Green button press
+    def greenPressed(self):
+        self.selectedIcon = 2
+        self.updateSelection()
+        self.okClicked()
+
+    # Handle Green button press
+    def yellowPressed(self):
+        self.selectedIcon = 3
+        self.updateSelection()
+        self.okClicked()
+
+    # Handle Blue button press
+    def bluePressed(self):
+        self.selectedIcon = 5
+        self.updateSelection()
+        self.okClicked()
 
 
 class SubMenu(Screen):
