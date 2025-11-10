@@ -200,8 +200,12 @@ def clean_oscam_ncam_files():
     for file_path in paths_to_clean:
         if exists(file_path):
             try:
-                with open(file_path, 'r') as f:
-                    content = f.read()
+                if PY3:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                else:
+                    with open(file_path, 'r') as f:
+                        content = f.read()
 
                 # Remove ALL free readers (those without "_personal")
                 lines = content.split('\n')
@@ -355,8 +359,12 @@ def append_personal_servers(file_path, servers):
         # Read existing content
         existing_content = ""
         if exists(file_path):
-            with open(file_path, 'r') as f:
-                existing_content = f.read()
+            if PY3:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    existing_content = f.read()
+            else:
+                with open(file_path, 'r') as f:
+                    existing_content = f.read()
 
         # Remove OLD personal sections to avoid duplicates
         lines = existing_content.split('\n')
@@ -405,7 +413,7 @@ def findCccam():
         cmd = 'find %s -name "CCcam.cfg"' % directory
         try:
             if PY3:
-                res = subprocess.check_output(cmd, shell=True, stderr=subprocess.PIPE).decode().strip()
+                res = subprocess.check_output(cmd, shell=True, stderr=subprocess.PIPE).decode('utf-8').strip()
             else:
                 res = subprocess.check_output(cmd, shell=True, stderr=subprocess.PIPE).strip()
             if res:
@@ -438,7 +446,9 @@ def findOscam():
 def saveFileContent(file_pathx):
     """Returns the contents of the file if it exists."""
     if exists(file_pathx):
-        with open(file_pathx, 'r') as f:
+        mode = 'r' if not PY3 else 'r'
+        encoding = 'utf-8' if PY3 else None
+        with open(file_pathx, mode, encoding=encoding) as f:
             return f.read()
     return ""
 
@@ -975,14 +985,15 @@ class MainMenus(Screen):
             print("DEBUG: Execute script in background...")
             self.runScriptInBackground()
 
-    def runScriptWithConsole(self):  # fixed lululla
+    def runScriptWithConsole(self):
         if exists(SCRIPT_PATH):
             chmod(SCRIPT_PATH, 0o777)
+            # Python 2/3 compatible approach
+            command = "sh '%s'" % SCRIPT_PATH
             self.session.open(Console,
                               _("Executing Free Cline Access Script"),
-                              cmdlist=[SCRIPT_PATH],
+                              command,
                               finishedCallback=self.scriptFinished)
-
         else:
             self.session.open(MessageBox,
                               "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh",
