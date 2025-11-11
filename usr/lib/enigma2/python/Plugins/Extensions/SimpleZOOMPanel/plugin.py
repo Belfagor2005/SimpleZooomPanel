@@ -553,6 +553,9 @@ class MainMenus(Screen):
         self.my_crond_run = False
         self.on_init_cron()
 
+        self.cccam_original_content = {}
+        self.oscam_original_content = {}
+
     def initUI(self):
         # Set up cront
         self["lab2"] = Label(_("CronTime Current Status:"))
@@ -757,6 +760,7 @@ class MainMenus(Screen):
 
     # Handles the confirmation for installing FCA Script from Lululla git # fixed lululla
     def UpdateFca(self, confirmed):
+        # confirmed = True when the user presses YES
         if confirmed:
             # First add personal lines if they exist
             add_personal_lines_to_configs()
@@ -766,25 +770,47 @@ class MainMenus(Screen):
             self.session.open(Console, _("Update FCA Script From Git..."), [command])
 
     def updateFilesWithBackup(self):
+        if not hasattr(self, 'cccam_original_content') or not self.cccam_original_content:
+            print("ERROR: cccam_original_content is not available")
+            return
+
+        if not hasattr(self, 'oscam_original_content'):
+            print("ERROR: oscam_original_content is not available")
+            return
+
+        print("DEBUG: Starting file updates...")
+
+        # CCCam files
         for cccam_path, backup in self.cccam_original_content.items():
+            if not cccam_path or not backup:
+                continue
             ensure_directory_exists(cccam_path)
             new_content_raw = saveFileContent(cccam_path).strip()
             new_content = remove_backup_block(new_content_raw)
             final_content = backup.strip() + "\n" + new_content
-            with open(cccam_path, 'w') as f:
-                f.write(final_content.strip() + "\n")
+            try:
+                with open(cccam_path, 'w') as f:
+                    f.write(final_content.strip() + "\n")
+                print("DEBUG: Updated %s" % cccam_path)
+            except Exception as e:
+                print("DEBUG: Error updating %s: %s" % (cccam_path, str(e)))
 
+        # OSCam files
         for oscam_path, backup in self.oscam_original_content.items():
+            if not oscam_path or not backup or not exists(oscam_path):
+                continue
             ensure_directory_exists(oscam_path)
             new_content_raw = saveFileContent(oscam_path).strip()
             new_content = remove_backup_block(new_content_raw)
             final_content = backup.strip() + "\n" + new_content
-            if exists(oscam_path):
+            try:
                 with open(oscam_path, 'w') as f:
                     f.write(final_content.strip() + "\n")
+                print("DEBUG: Updated %s" % oscam_path)
+            except Exception as e:
+                print("DEBUG: Error updating %s: %s" % (oscam_path, str(e)))
 
         add_personal_lines_to_cccam_only()
-
         convert_personal_lines_if_needed()
 
         print("DEBUG: EXECUTION FINISHED")
@@ -932,9 +958,19 @@ class MainMenus(Screen):
                 # Handle errors during the addition process
                 self.session.open(MessageBox, "Error installing CCCAM.CFG/OSCAM.CFG/CCCAMDATAX/OSCAMDATAX: " + str(e), MessageBox.TYPE_ERROR, timeout=15)
 
-    def scriptFinished(self, result=None):  # fixed lululla
+    def scriptFinished(self, result=None, retval=None, extra_args=None):
         print("DEBUG: Script finished, proceeding with file updates.")
-        self.updateFilesWithBackup()
+        print("DEBUG: Script result:", result)
+        print("DEBUG: Script retval:", retval)
+
+        if hasattr(self, 'cccam_original_content') and hasattr(self, 'oscam_original_content'):
+            self.updateFilesWithBackup()
+        else:
+            print("ERROR: Backup content not found! Cannot update files.")
+            self.session.open(MessageBox,
+                              "Error: Backup data not found. Cannot complete update.",
+                              MessageBox.TYPE_ERROR,
+                              timeout=5)
 
     # Run the script FCA in the background
     def runScriptInBackground(self):
@@ -949,6 +985,11 @@ class MainMenus(Screen):
 
     # recoded from lululla # fixed lululla
     def runScriptWithPreference(self, confirmed):
+        # confirmed = True when the user presses YES (wants to see the process)
+        # confirmed = False when the user presses NO (does not want to see the process)
+
+        print("DEBUG: User preference - see process:", confirmed)
+
         # First add personal lines if they exist
         add_personal_lines_to_configs()
 
@@ -979,22 +1020,19 @@ class MainMenus(Screen):
 
         # Step 2: Execute script
         if confirmed:
+            # If confirmed = TRUE -> show console
             print("DEBUG: Execute script in console...")
             self.runScriptWithConsole()
         else:
+            # If confirmed = FALSE (NO) -> run in background
             print("DEBUG: Execute script in background...")
             self.runScriptInBackground()
 
     def runScriptWithConsole(self):
         if exists(SCRIPT_PATH):
             chmod(SCRIPT_PATH, 0o777)
-            command = "sh '%s'" % SCRIPT_PATH
-            self.session.open(Console,
-                              _("Executing Free Cline Access Script"),
-                              command)
-            
-            from twisted.internet import reactor
-            reactor.callLater(2, self.scriptFinished)
+            self.console = Console()
+            self.console.ePopen("sh '%s'" % SCRIPT_PATH, self.scriptFinished)
         else:
             self.session.open(MessageBox,
                               "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh",
