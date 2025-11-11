@@ -988,12 +988,13 @@ class MainMenus(Screen):
     def runScriptWithConsole(self):
         if exists(SCRIPT_PATH):
             chmod(SCRIPT_PATH, 0o777)
-            # Python 2/3 compatible approach
             command = "sh '%s'" % SCRIPT_PATH
             self.session.open(Console,
                               _("Executing Free Cline Access Script"),
-                              command,
-                              finishedCallback=self.scriptFinished)
+                              command)
+            
+            from twisted.internet import reactor
+            reactor.callLater(2, self.scriptFinished)
         else:
             self.session.open(MessageBox,
                               "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh",
