@@ -3,8 +3,8 @@
 ## setup command=wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh
 
 ## Only These 2 lines to edit with new version ######
-version='2.3.1'
-changelog='\nFix Crond Stop'
+version='2.3.2'
+changelog='\nFix Crash on command'
 ##############################################################
 
 TMPPATH=/tmp/SimpleZooomPanel-main

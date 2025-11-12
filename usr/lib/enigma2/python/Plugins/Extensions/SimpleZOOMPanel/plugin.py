@@ -36,7 +36,7 @@ if PY3:
 else:
     from urllib2 import urlopen
 
-version = '2.3.1'
+version = '2.3.2'
 
 BASE_PATH = dirname(abspath(__file__))
 
@@ -766,10 +766,13 @@ class MainMenus(Screen):
 
             # Then update the script
             command = "wget -O %s 'https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/refs/heads/main/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh' && chmod +x %s" % (SCRIPT_PATH, SCRIPT_PATH)
-            self.session.open(Console,
-                              _("Update FCA Script From Git..."),
-                              cmdlist=[command],
-                              finishedCallback=None)
+            self.console = Console()
+            self.console.ePopen(command, None)
+            
+            self.session.open(MessageBox,
+                              "FCA script update started...",
+                              MessageBox.TYPE_INFO,
+                              timeout=5)
 
     def updateFilesWithBackup(self):
         if not hasattr(self, 'cccam_original_content') or not self.cccam_original_content:
@@ -964,15 +967,10 @@ class MainMenus(Screen):
         print("DEBUG: Script finished, proceeding with file updates.")
         print("DEBUG: Script result:", result)
         print("DEBUG: Script retval:", retval)
-
         if hasattr(self, 'cccam_original_content') and hasattr(self, 'oscam_original_content'):
             self.updateFilesWithBackup()
         else:
-            print("ERROR: Backup content not found! Cannot update files.")
-            self.session.open(MessageBox,
-                              "Error: Backup data not found. Cannot complete update.",
-                              MessageBox.TYPE_ERROR,
-                              timeout=5)
+            print("ERROR: Backup content not found!")
 
     # Run the script FCA in the background
     def runScriptInBackground(self):
@@ -1033,11 +1031,14 @@ class MainMenus(Screen):
     def runScriptWithConsole(self):
         if exists(SCRIPT_PATH):
             chmod(SCRIPT_PATH, 0o777)
-            command = "sh '%s'" % SCRIPT_PATH
-            self.session.open(Console,
-                              _("Executing Free Cline Access Script"),
-                              cmdlist=[command],
-                              finishedCallback=self.scriptFinished)
+            # SOLUZIONE DEFINITIVA: Console().ePopen
+            self.console = Console()
+            self.console.ePopen("sh '%s'" % SCRIPT_PATH, self.scriptFinished)
+            
+            self.session.open(MessageBox,
+                              "Script execution started. Please wait for completion...",
+                              MessageBox.TYPE_INFO,
+                              timeout=5)
         else:
             self.session.open(MessageBox,
                               "Error: file not found\nSimpleZOOMPanel/Centrum/Tools/FCA.sh",
