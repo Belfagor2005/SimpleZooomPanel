@@ -36,7 +36,7 @@ if PY3:
 else:
     from urllib2 import urlopen
 
-version = '2.3.2'
+version = '2.3.3'
 
 BASE_PATH = dirname(abspath(__file__))
 
