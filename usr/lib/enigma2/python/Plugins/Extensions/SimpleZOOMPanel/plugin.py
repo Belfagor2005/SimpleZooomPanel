@@ -729,20 +729,50 @@ class MainMenus(Screen):
 
     def confirmInstallCron(self, confirmed):
         if confirmed:
-            source = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/root"
-            destination = "/etc/cron/crontabs/root"
-            command = "mkdir -p /etc/cron/crontabs;cp %s %s && chmod +x %s" % (source, destination, destination)
-            self.session.open(Console, _("Installing cron job script..."), [command])
+            def install_cron():
+                import subprocess
+                try:
+                    source = "/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/root"
+                    destination = "/etc/cron/crontabs/root"
+                    command = "mkdir -p /etc/cron/crontabs; cp %s %s && chmod +x %s" % (source, destination, destination)
+                    result = subprocess.call(command, shell=True)
+                    if result == 0:
+                        print("DEBUG: Cron installed successfully")
+                    else:
+                        print("DEBUG: Cron installation failed with code %s" % result)
+                except Exception as e:
+                    print("DEBUG: Error installing cron: %s" % str(e))
+
+            import threading
+            thread = threading.Thread(target=install_cron)
+            thread.daemon = True
+            thread.start()
+            self.session.open(MessageBox, "Installing cron job script in background...", MessageBox.TYPE_INFO, timeout=5)
 
     # simply the update
     def update(self):
-        # First add your personal lines if they exist
-        add_personal_lines_to_configs()
+        def update_panel():
+            import subprocess
+            try:
+                # Add personal lines if they exist
+                add_personal_lines_to_configs()
+                command = (
+                    'wget -q --no-check-certificate '
+                    'https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh'
+                )
+                result = subprocess.call(command, shell=True)
+                if result == 0:
+                    print("DEBUG: Panel updated successfully")
+                else:
+                    print("DEBUG: Panel update failed with code %s" % result)
+            except Exception as e:
+                print("DEBUG: Error updating panel: %s" % str(e))
 
-        self.session.open(Console, _("Updating package..."), [
-            # "wget -O /tmp/package.ipk 'https://drive.google.com/uc?export=download&id=1c01xd-idAwPc6rDO8TqGijXG8niJ52Sv' > /dev/null 2>&1 && opkg install /tmp/package.ipk"
-            'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh'
-        ])
+        import threading
+        thread = threading.Thread(target=update_panel)
+        thread.daemon = True
+        thread.start()
+        self.session.open(MessageBox, "Updating panel in background...", MessageBox.TYPE_INFO, timeout=5)
 
     def updateSelection(self):
         descriptions = ["Tools", "Extras", "Settings", "CronTimer", "Help"]
@@ -768,7 +798,7 @@ class MainMenus(Screen):
             command = "wget -O %s 'https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/refs/heads/main/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel/Centrum/Tools/FCA.sh' && chmod +x %s" % (SCRIPT_PATH, SCRIPT_PATH)
             self.console = Console()
             self.console.ePopen(command, None)
-            
+
             self.session.open(MessageBox,
                               "FCA script update started...",
                               MessageBox.TYPE_INFO,
@@ -863,8 +893,23 @@ class MainMenus(Screen):
     # Handles the confirmation for installing SoftCAM feed
     def confirmInstallSoftCAMFeed(self, confirmed):
         if confirmed:
-            command = "wget -qO- --no-check-certificate http://updates.mynonpublic.com/oea/feed | bash"
-            self.session.open(Console, _("Installing SoftCAM feed..."), [command])
+            def install_softcam():
+                import subprocess
+                try:
+                    command = "wget -qO- --no-check-certificate http://updates.mynonpublic.com/oea/feed | bash"
+                    result = subprocess.call(command, shell=True)
+                    if result == 0:
+                        print("DEBUG: SoftCAM feed installed successfully")
+                    else:
+                        print("DEBUG: SoftCAM feed installation failed with code %s" % result)
+                except Exception as e:
+                    print("DEBUG: Error installing SoftCAM feed: %s" % str(e))
+
+            import threading
+            thread = threading.Thread(target=install_softcam)
+            thread.daemon = True
+            thread.start()
+            self.session.open(MessageBox, "Installing SoftCAM feed in background...", MessageBox.TYPE_INFO, timeout=5)
 
     # Prompts the user to confirm the installation of HomeMade config
     def installHomeMadeConfig(self):
@@ -906,8 +951,23 @@ class MainMenus(Screen):
     # Handles the confirmation for installing CURL
     def confirmInstallCURL(self, confirmed):
         if confirmed:
-            command = "opkg update && opkg install curl"
-            self.session.open(Console, _("Installing CURL..."), [command])
+            def install_curl():
+                import subprocess
+                try:
+                    command = "opkg update && opkg install curl"
+                    result = subprocess.call(command, shell=True)
+                    if result == 0:
+                        print("DEBUG: CURL installed successfully")
+                    else:
+                        print("DEBUG: CURL installation failed with code %s" % result)
+                except Exception as e:
+                    print("DEBUG: Error installing CURL: %s" % str(e))
+
+            import threading
+            thread = threading.Thread(target=install_curl)
+            thread.daemon = True
+            thread.start()
+            self.session.open(MessageBox, "Installing CURL in background...", MessageBox.TYPE_INFO, timeout=5)
 
     # Prompts the user to confirm the installation of WGET
     def installWGET(self):
@@ -916,8 +976,24 @@ class MainMenus(Screen):
     # Handles the confirmation for installing WGET
     def confirmInstallWGET(self, confirmed):
         if confirmed:
-            command = "opkg update && opkg install wget"
-            self.session.open(Console, _("Installing WGET..."), [command])
+            def install_wget():
+                import subprocess
+                try:
+                    command = "opkg update && opkg install wget"
+                    result = subprocess.call(command, shell=True)
+                    if result == 0:
+                        print("DEBUG: WGET installed successfully")
+                    else:
+                        print("DEBUG: WGET installation failed with code %s" % result)
+                except Exception as e:
+                    print("DEBUG: Error installing WGET: %s" % str(e))
+
+            import threading
+            thread = threading.Thread(target=install_wget)
+            thread.daemon = True
+            thread.start()
+
+            self.session.open(MessageBox, "Installing WGET in background...", MessageBox.TYPE_INFO, timeout=5)
 
     # Prompts the user to confirm the installation of Python
     def installPython(self):
@@ -926,14 +1002,29 @@ class MainMenus(Screen):
     # Handles the confirmation for installing Python
     def confirmInstallPython(self, confirmed):
         if confirmed:
-            command = (
-                "opkg update; "
-                "opkg install python3; "
-                "wget https://bootstrap.pypa.io/get-pip.py; "
-                "python3 get-pip.py; "
-                "pip3 install requests"
-            )
-            self.session.open(Console, _("Installing Python..."), [command])
+            def install_python():
+                import subprocess
+                try:
+                    command = (
+                        "opkg update; "
+                        "opkg install python3; "
+                        "wget https://bootstrap.pypa.io/get-pip.py; "
+                        "python3 get-pip.py; "
+                        "pip3 install requests"
+                    )
+                    result = subprocess.call(command, shell=True)
+                    if result == 0:
+                        print("DEBUG: Python installed successfully")
+                    else:
+                        print("DEBUG: Python installation failed with code %s" % result)
+                except Exception as e:
+                    print("DEBUG: Error installing Python: %s" % str(e))
+
+            import threading
+            thread = threading.Thread(target=install_python)
+            thread.daemon = True
+            thread.start()
+            self.session.open(MessageBox, "Installing Python in background...", MessageBox.TYPE_INFO, timeout=5)
 
     # Prompts the user to confirm the addition of CCCAM/CCCAMDATAX/OSCAMDATAX
     def installCCCAMDATAX(self):
@@ -1034,7 +1125,7 @@ class MainMenus(Screen):
             # SOLUZIONE DEFINITIVA: Console().ePopen
             self.console = Console()
             self.console.ePopen("sh '%s'" % SCRIPT_PATH, self.scriptFinished)
-            
+
             self.session.open(MessageBox,
                               "Script execution started. Please wait for completion...",
                               MessageBox.TYPE_INFO,
@@ -1047,33 +1138,129 @@ class MainMenus(Screen):
 
     # Installs AJPanel
     def runAJPanel(self):
-        self.session.open(Console, _("Installing AJPanel..."), [
-            "/bin/sh -c 'opkg install https://github.com/AMAJamry/AJPanel/raw/main/enigma2-plugin-extensions-ajpanel_v9.4.0_all.ipk'"
-        ])
+        def install_panel():
+            import subprocess
+            try:
+                command = "/bin/sh -c 'opkg install https://github.com/AMAJamry/AJPanel/raw/main/enigma2-plugin-extensions-ajpanel_v9.4.0_all.ipk'"
+                result = subprocess.call(command, shell=True)
+                if result == 0:
+                    print("DEBUG: AJPanel installed successfully")
+                else:
+                    print("DEBUG: Installation failed with code %s" % result)
+            except Exception as e:
+                print("DEBUG: Error: %s" % str(e))
 
-    # Installs Levi45Addon
+        import threading
+        thread = threading.Thread(target=install_panel)
+        thread.daemon = True
+        thread.start()
+
+        self.session.open(
+            MessageBox,
+            "Installing AJPanel in background...",
+            MessageBox.TYPE_INFO,
+            timeout=5
+        )
+
+    # Install Levi45Addon
     def runLevi45Addon(self):
-        self.session.open(Console, _("Installing Levi45Addon..."), [
-            'wget -q --no-check-certificate https://raw.githubusercontent.com/levi-45/Addon/main/installer.sh -O - | /bin/sh'
-        ])
+        def install_addon():
+            import subprocess
+            try:
+                command = 'wget -q --no-check-certificate https://raw.githubusercontent.com/levi-45/Addon/main/installer.sh -O - | /bin/sh'
+                result = subprocess.call(command, shell=True)
+                if result == 0:
+                    print("DEBUG: Levi45Addon installed successfully")
+                else:
+                    print("DEBUG: Installation failed with code %s" % result)
+            except Exception as e:
+                print("DEBUG: Error: %s" % str(e))
 
-    # Installs LinuxsatPanel addons recoded from lululla
+        import threading
+        thread = threading.Thread(target=install_addon)
+        thread.daemon = True
+        thread.start()
+
+        self.session.open(
+            MessageBox,
+            "Installing Levi45Addon in background...",
+            MessageBox.TYPE_INFO,
+            timeout=5
+        )
+
+    # Install LinuxsatPanel addons
     def runLinuxsatPanel(self):
-        self.session.open(Console, _("Installing LinuxsatPanel addons..."), [
-            'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/LinuxsatPanel/main/installer.sh -O - | /bin/sh'
-        ])
+        def install_panel():
+            import subprocess
+            try:
+                command = 'wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/LinuxsatPanel/main/installer.sh -O - | /bin/sh'
+                result = subprocess.call(command, shell=True)
+                if result == 0:
+                    print("DEBUG: LinuxsatPanel installed successfully")
+                else:
+                    print("DEBUG: Installation failed with code %s" % result)
+            except Exception as e:
+                print("DEBUG: Error: %s" % str(e))
+
+        import threading
+        thread = threading.Thread(target=install_panel)
+        thread.daemon = True
+        thread.start()
+
+        self.session.open(
+            MessageBox,
+            "Installing LinuxsatPanel in background...",
+            MessageBox.TYPE_INFO,
+            timeout=5
+        )
 
     # Installs ArchivCZSK
     def runArchivCZSK(self):
-        self.session.open(Console, _("Installing ArchivCZSK..."), [
-            "/bin/sh -c 'wget -q --no-check-certificate https://raw.githubusercontent.com/archivczsk/archivczsk/main/build/archivczsk_installer.sh -O /tmp/archivczsk_installer.sh && /bin/sh /tmp/archivczsk_installer.sh'"
-        ])
+        def install_archiv():
+            import subprocess
+            try:
+                command = (
+                    "/bin/sh -c 'wget -q --no-check-certificate "
+                    "https://raw.githubusercontent.com/archivczsk/archivczsk/main/build/archivczsk_installer.sh "
+                    "-O /tmp/archivczsk_installer.sh && /bin/sh /tmp/archivczsk_installer.sh'"
+                )
+                result = subprocess.call(command, shell=True)
+                if result == 0:
+                    print("DEBUG: ArchivCZSK installed successfully")
+                else:
+                    print("DEBUG: ArchivCZSK installation failed with code %s" % result)
+            except Exception as e:
+                print("DEBUG: Error installing ArchivCZSK: %s" % str(e))
+
+        import threading
+        thread = threading.Thread(target=install_archiv)
+        thread.daemon = True
+        thread.start()
+        self.session.open(MessageBox, "Installing ArchivCZSK in background...", MessageBox.TYPE_INFO, timeout=5)
 
     # Installs CSFD
     def runCSFD(self):
-        self.session.open(Console, _("Installing CSFD..."), [
-            "/bin/sh -c 'opkg install https://github.com/skyjet18/enigma2-plugin-extensions-csfd/releases/download/v18.00/enigma2-plugin-extensions-csfd_18.00-20230919_all.ipk'"
-        ])
+        def install_csfd():
+            import subprocess
+            try:
+                command = (
+                    "/bin/sh -c 'opkg install "
+                    "https://github.com/skyjet18/enigma2-plugin-extensions-csfd/releases/download/"
+                    "v18.00/enigma2-plugin-extensions-csfd_18.00-20230919_all.ipk'"
+                )
+                result = subprocess.call(command, shell=True)
+                if result == 0:
+                    print("DEBUG: CSFD installed successfully")
+                else:
+                    print("DEBUG: CSFD installation failed with code %s" % result)
+            except Exception as e:
+                print("DEBUG: Error installing CSFD: %s" % str(e))
+
+        import threading
+        thread = threading.Thread(target=install_csfd)
+        thread.daemon = True
+        thread.start()
+        self.session.open(MessageBox, "Installing CSFD in background...", MessageBox.TYPE_INFO, timeout=5)
 
     # Runs a given command and handles success or failure
     def runCommand(self, command, success_msg, error_msg):
