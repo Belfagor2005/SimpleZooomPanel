@@ -1,5 +1,41 @@
 #!/bin/sh
-if [ -d /usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel ]; then
-rm -rf /usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel > /dev/null 2>&1
+
+echo "****************************************"
+echo "*    SimpleZOOMPanel Pre-Installation  *"
+echo "****************************************"
+
+PLUGIN_PATH="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel"
+BACKUP_DIR="/tmp/simplezoom_backup"
+
+# Crea directory di backup
+mkdir -p "$BACKUP_DIR"
+
+if [ -d "$PLUGIN_PATH" ]; then
+    echo "Found existing installation. Creating backup..."
+    
+    # Backup delle personal lines dell'utente
+    if [ -d "$PLUGIN_PATH/personal_lines" ]; then
+        echo "Backing up user's personal lines..."
+        cp -r "$PLUGIN_PATH/personal_lines" "$BACKUP_DIR/" 2>/dev/null
+    fi
+    
+    # Backup degli script
+    if [ -f "$PLUGIN_PATH/Centrum/Tools/FCA.sh" ]; then
+        echo "Backing up FCA script..."
+        mkdir -p "$BACKUP_DIR/Centrum/Tools"
+        cp "$PLUGIN_PATH/Centrum/Tools/FCA.sh" "$BACKUP_DIR/Centrum/Tools/" 2>/dev/null
+    fi
+    
+    # Rimuove la vecchia versione
+    echo "Removing old version..."
+    rm -rf "$PLUGIN_PATH"
+    
+    echo "Backup created in: $BACKUP_DIR"
+else
+    echo "No previous installation found. Fresh install."
 fi
+
+echo ""
+echo "Pre-installation completed successfully!"
+echo "Proceeding with installation..."
 exit 0

@@ -1,7 +1,7 @@
 #!/bin/bash
 ## setup command=wget -q --no-check-certificate https://raw.githubusercontent.com/Belfagor2005/SimpleZooomPanel/main/installer.sh -O - | /bin/sh
 
-version='2.3.2'
+version='2.3.4'
 changelog='\nFix Crash on command'
 
 TMPPATH=/tmp/SimpleZooomPanel-install

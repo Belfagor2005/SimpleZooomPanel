@@ -4,7 +4,7 @@ from __future__ import absolute_import
 __author__ = "Lululla"
 __email__ = "ekekaz@gmail.com"
 __license__ = "GPL-v2"
-__version__ = "1.0.0"
+__version__ = "2.3.4"
 
 from Components.Language import language
 from Tools.Directories import resolveFilename, SCOPE_PLUGINS

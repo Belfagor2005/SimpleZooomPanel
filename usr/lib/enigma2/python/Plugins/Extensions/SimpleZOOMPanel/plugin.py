@@ -26,7 +26,7 @@ from Screens.Screen import Screen
 from Plugins.Plugin import PluginDescriptor
 
 # Relative imports
-from . import _
+from . import _, __version__
 
 
 PY3 = sys.version_info.major >= 3
@@ -36,14 +36,10 @@ if PY3:
 else:
     from urllib2 import urlopen
 
-version = '2.3.3'
 
 BASE_PATH = dirname(abspath(__file__))
-
 SCRIPT_PATH = join(BASE_PATH, "Centrum", "Tools", "FCA.sh")
-
 PERSONAL_LINES_DIR = join(BASE_PATH, "personal_lines")
-
 CCCAM_PERSONAL = join(PERSONAL_LINES_DIR, "cccamx")
 OSCAM_PERSONAL = join(PERSONAL_LINES_DIR, "oscamx")
 NCAM_PERSONAL = join(PERSONAL_LINES_DIR, "ncamx")
@@ -309,19 +305,19 @@ def convert_only_personal_c_lines():
                 password = parts[4]
 
                 oscam_server = """[reader]
-label = %s_%s_personal
-protocol = cccam
-device = %s,%s
-user = %s
-password = %s
-group = 2
-ccckeepalive = 1
-inactivitytimeout = 30
-reconnecttimeout = 5
-disablecrccws = 1
-disablecrccws_only_for = 0E00:000000,0500:030B00,050F00;098C:000000;09C4:000000
-audisabled = 0
-""" % (hostname, port, hostname, port, username, password)
+                    label = %s_%s_personal
+                    protocol = cccam
+                    device = %s,%s
+                    user = %s
+                    password = %s
+                    group = 2
+                    ccckeepalive = 1
+                    inactivitytimeout = 30
+                    reconnecttimeout = 5
+                    disablecrccws = 1
+                    disablecrccws_only_for = 0E00:000000,0500:030B00,050F00;098C:000000;09C4:000000
+                    audisabled = 0
+                    """ % (hostname, port, hostname, port, username, password)
                 oscam_servers.append(oscam_server)
                 print("DEBUG: Created reader for:", hostname)
 
@@ -581,7 +577,7 @@ class MainMenus(Screen):
         self["detail"] = Label("Select an option to view details")
 
         # Additional detail labels for each icon
-        self["detail1"] = Label("A suite of utility tools. Version %s" % version)
+        self["detail1"] = Label("A suite of utility tools. Version %s" % __version__)
         self["detail2"] = Label("Additional features and enhancements.")
         self["detail3"] = Label("Customize plugin to your preference.")
         self["detail4"] = Label("Install CronTimer. Use Plugin Image")

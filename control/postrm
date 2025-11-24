@@ -1,22 +1,56 @@
 #!/bin/sh
 
-echo
-echo "*****************************************"
-echo "*         Uninstall SimpleZOOMPanel     *"
-echo "*****************************************"
-EXTDIR="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel"
-dream='/var/lib/dpkg/info'
+echo "****************************************"
+echo "*    SimpleZOOMPanel Removal Script    *"
+echo "****************************************"
 
-if [ -d "$dream" ]; then
-   rm -rf "$EXTDIR" > /dev/null 2>&1
+# Configurazione paths
+PLUGIN_PATH="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel"
+PERSONAL_LINES_DIR="$PLUGIN_PATH/personal_lines"
+
+echo "Checking for SimpleZOOMPanel installation..."
+
+# Rimuove solo i file del plugin, preserva i dati utente
+if [ -d "$PLUGIN_PATH" ]; then
+    echo "Removing plugin files..."
+    
+    # Backup delle personal lines dell'utente se esistono
+    if [ -d "$PERSONAL_LINES_DIR" ]; then
+        echo "Backing up user's personal lines..."
+        BACKUP_DIR="/tmp/simplezoom_backup"
+        mkdir -p "$BACKUP_DIR"
+        cp -r "$PERSONAL_LINES_DIR" "$BACKUP_DIR/" 2>/dev/null
+        echo "User personal lines backed up to: $BACKUP_DIR"
+    fi
+    
+    # Rimuove il plugin
+    rm -rf "$PLUGIN_PATH"
+    echo "Plugin files removed successfully."
+else
+    echo "No SimpleZOOMPanel installation found."
 fi
 
-if [ -d "$EXTDIR" ]; then
-   rm -rf "$EXTDIR" > /dev/null 2>&1
-fi
-echo "*****************************************"
-echo "*          ....done                     *"
-echo "*****************************************"
+# Rimuove file temporanei e cache
+echo "Cleaning temporary files..."
+rm -f /usr/script/FCA.sh 2>/dev/null
+rm -f /tmp/simplezoom_* 2>/dev/null
+
+# Non rimuovere i file di configurazione dell'utente!
+echo "Preserving user configuration files:"
+echo "- /etc/cccamx.txt"
+echo "- /etc/oscamx.txt" 
+echo "- /etc/ncamx.txt"
+echo "- /etc/CCcam.cfg"
+echo "- /etc/oscam.cfg"
+
+echo ""
+echo "****************************************"
+echo "* Removal completed successfully!      *"
+echo "* Please restart Enigma2 to complete.  *"
+echo "****************************************"
+echo ""
+echo "Note: Your personal lines and configuration"
+echo "files have been preserved."
+echo ""
+
 exit 0
-
-

@@ -2,8 +2,85 @@
 echo ""
 echo "********************************************"
 echo "*           SimpleZOOMPanel                *"
-echo "*  select skin to enjoy new Wolrd			 *"
+echo "*   Installing dependencies and setup      *"
 echo "********************************************"
 echo ""
+
+# Configurazione paths
+PLUGIN_PATH="/usr/lib/enigma2/python/Plugins/Extensions/SimpleZOOMPanel"
+PERSONAL_LINES_DIR="$PLUGIN_PATH/personal_lines"
+SCRIPT_PATH="$PLUGIN_PATH/Centrum/Tools/FCA.sh"
+
+# Crea directory necessarie
+echo "Creating necessary directories..."
+mkdir -p /usr/script
+mkdir -p /etc/tuxbox/config
+mkdir -p /var/tuxbox/config
+mkdir -p "$PERSONAL_LINES_DIR"
+
+# Imposta permessi
+echo "Setting permissions..."
+chmod 755 "$PLUGIN_PATH"
+chmod 755 "$PLUGIN_PATH/Centrum"
+chmod 755 "$PLUGIN_PATH/Centrum/Tools"
+if [ -f "$SCRIPT_PATH" ]; then
+    chmod 755 "$SCRIPT_PATH"
+fi
+
+# Crea file di configurazione se non esistono
+echo "Creating default config files if missing..."
+touch /etc/CCcam.cfg 2>/dev/null
+touch /etc/oscam.cfg 2>/dev/null
+touch /etc/CCcamDATAx.cfg 2>/dev/null
+touch /etc/OscamDATAx.cfg 2>/dev/null
+
+# Crea file personal lines di esempio se non esistono
+if [ ! -f /etc/cccamx.txt ]; then
+    echo "# Add your personal C-lines here" > /etc/cccamx.txt
+    echo "# Example: C: server.example.com 12000 user1 pass1" >> /etc/cccamx.txt
+fi
+
+if [ ! -f /etc/oscamx.txt ]; then
+    echo "# Add your personal OSCam readers here" > /etc/oscamx.txt
+fi
+
+if [ ! -f /etc/ncamx.txt ]; then
+    echo "# Add your personal NCam readers here" > /etc/ncamx.txt
+fi
+
+# Imposta permessi per i file di configurazione
+chmod 644 /etc/CCcam.cfg 2>/dev/null
+chmod 644 /etc/oscam.cfg 2>/dev/null
+chmod 644 /etc/cccamx.txt 2>/dev/null
+chmod 644 /etc/oscamx.txt 2>/dev/null
+chmod 644 /etc/ncamx.txt 2>/dev/null
+
+# Verifica dipendenze Python
+echo "Checking Python dependencies..."
+python -c "import six" 2>/dev/null || {
+    echo "Installing Python six library..."
+    opkg update
+    opkg install python-six
+}
+
+# Backup dei file esistenti se è un aggiornamento
+if [ -f "$SCRIPT_PATH" ]; then
+    echo "Backing up existing configuration..."
+    # Il plugin gestirà automaticamente il backup al primo avvio
+fi
+
+echo ""
+echo "Installation completed successfully!"
+echo ""
+echo "Important:"
+echo "1. Place your personal lines in:"
+echo "   - /etc/cccamx.txt for CCcam lines"
+echo "   - /etc/oscamx.txt for OSCam readers" 
+echo "   - /etc/ncamx.txt for NCam readers"
+echo ""
+echo "2. Use 'Save Personal Lines' in Tools menu to backup them"
+echo "3. Personal lines will be preserved during updates"
+echo ""
+echo "Enjoy Simple ZOOM Panel!"
 sleep 2
 exit 0
