@@ -18,13 +18,13 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "CronTime の現在のステータス:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "ZOOMに似ていますが、よりシンプルでパネルでもあります。"
 
 msgid "Running"
-msgstr ""
+msgstr "ランニング"
 
 msgid "Stopped"
-msgstr ""
+msgstr "停止しました"

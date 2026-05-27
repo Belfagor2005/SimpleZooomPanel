@@ -18,13 +18,13 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "CronTime Aktuell status:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "Det är som ZOOM men enklare, och även en panel."
 
 msgid "Running"
-msgstr ""
+msgstr "Spring"
 
 msgid "Stopped"
-msgstr ""
+msgstr "Slutade"

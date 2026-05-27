@@ -18,13 +18,13 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "Trạng thái hiện tại của CronTime:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "Nó giống như ZOOM nhưng đơn giản hơn và cũng có bảng điều khiển."
 
 msgid "Running"
-msgstr ""
+msgstr "Đang chạy"
 
 msgid "Stopped"
-msgstr ""
+msgstr "Đã dừng"

@@ -17,13 +17,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "Тековен статус на CronTime:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "Тоа е како ZOOM, но поедноставно, а исто така и панел."
 
 msgid "Running"
-msgstr ""
+msgstr "Трчање"
 
 msgid "Stopped"
-msgstr ""
+msgstr "Застана"

@@ -17,13 +17,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "Kasalukuyang Katayuan ng CronTime:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "Ito ay tulad ng ZOOM ngunit mas simple, at isa ring panel."
 
 msgid "Running"
-msgstr ""
+msgstr "Tumatakbo"
 
 msgid "Stopped"
-msgstr ""
+msgstr "Huminto"

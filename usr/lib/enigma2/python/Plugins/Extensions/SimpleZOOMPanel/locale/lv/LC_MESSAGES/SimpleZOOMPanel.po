@@ -18,13 +18,13 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n != 0 ? 1 : 2);\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "CronTime pašreizējais statuss:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "Tas ir kā ZOOM, bet vienkāršāks, un arī panelis."
 
 msgid "Running"
-msgstr ""
+msgstr "Skriešana"
 
 msgid "Stopped"
-msgstr ""
+msgstr "Apstājās"

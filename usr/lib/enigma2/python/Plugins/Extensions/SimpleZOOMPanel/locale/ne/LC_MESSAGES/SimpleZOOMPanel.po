@@ -17,13 +17,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "CronTime वर्तमान स्थिति:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "यो ZOOM जस्तै तर सरल छ, र प्यानल पनि।"
 
 msgid "Running"
-msgstr ""
+msgstr "दौडिरहेको"
 
 msgid "Stopped"
-msgstr ""
+msgstr "रोकियो"

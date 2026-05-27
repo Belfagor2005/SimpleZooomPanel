@@ -17,13 +17,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "CronTime агымдагы торышы:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "Бу ZOOM кебек, ләкин гадирәк, шулай ук ​​панель."
 
 msgid "Running"
-msgstr ""
+msgstr "Йөгерү"
 
 msgid "Stopped"
-msgstr ""
+msgstr "Тукта"

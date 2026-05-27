@@ -18,13 +18,13 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 msgid "CronTime Current Status:"
-msgstr ""
+msgstr "Текущий статус CronTime:"
 
 msgid "It is like ZOOM but simpler, and also a panel."
-msgstr ""
+msgstr "Это похоже на ZOOM, но попроще, и тоже панель."
 
 msgid "Running"
-msgstr ""
+msgstr "Бег"
 
 msgid "Stopped"
-msgstr ""
+msgstr "Остановлено"
