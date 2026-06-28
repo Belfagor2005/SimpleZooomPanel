@@ -1,15 +1,15 @@
 <h1 align="center">📺 Simple ZOOM Panel for Enigma2</h1>
 
-![Visitors](https://komarev.com/ghpvc/?username=Belfagor2005&label=Repository%20Views&color=blueviolet)
 [![Version](https://img.shields.io/badge/Version-2.3-blue.svg)](https://github.com/Belfagor2005/SimpleZooomPanel)
 ![Enigma2](https://img.shields.io/badge/Enigma2-Plugin-green.svg)
 ![Python Version](https://img.shields.io/badge/Python-2.7%20%7C%203.x-blue.svg)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python package](https://github.com/Belfagor2005/SimpleZooomPanel/actions/workflows/pylint.yml/badge.svg)](https://github.com/Belfagor2005/SimpleZooomPanel/actions/workflows/pylint.yml)
 [![Ruff Status](https://github.com/Belfagor2005/SimpleZooomPanel/actions/workflows/ruff.yml/badge.svg)](https://github.com/Belfagor2005/SimpleZooomPanel/actions/workflows/ruff.yml)
-[![GitHub stars](https://img.shields.io/github/stars/Belfagor2005/SimpleZooomPanel?style=social)](https://github.com/Belfagor2005/SimpleZooomPanel/stargazers)
-[![Donate](https://img.shields.io/badge/_-Donate-red.svg?logo=githubsponsors&labelColor=555555&style=for-the-badge)](https://ko-fi.com/lululla)
 
+[![Visitors](https://komarev.com/ghpvc/?username=Belfagor2005&label=Repository%20Views&color=blueviolet)](https://github.com/Belfagor2005)
+[![Donate](https://img.shields.io/badge/_-Donate-red.svg?logo=githubsponsors&labelColor=555555&style=for-the-badge)](https://ko-fi.com/lululla)
+[![Donate](https://img.shields.io/badge/_-Donate-green.svg?logo=githubsponsors&labelColor=555555&style=for-the-badge)](https://paypal.me/belfagor2005)
 
 A comprehensive Enigma2 plugin that provides free server access, personal lines management, and various utilities in a user-friendly interface.
 
